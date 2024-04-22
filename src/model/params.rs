@@ -24,7 +24,7 @@ pub struct GenerationParams {
     /// See `temperature` for the formula.
     pub temperature_alpha: f64,
 
-    #[arg(long, default_value_t = 0.8)]
+    #[arg(long, default_value_t = 0.6)]
     /// Probability multiplier for the temperature
     /// when the generated token was already generated before
     /// 

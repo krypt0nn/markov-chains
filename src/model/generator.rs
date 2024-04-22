@@ -82,7 +82,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
             // Find all the repeats of the next token
             let repeats = self.chain.iter()
                 .filter(|token| **token == next)
-                .sum::<u64>();
+                .count();
 
             // If the random seed is greater than the repeat penalty
             if random_seed >= self.params.repeat_penalty.powi(repeats as i32) {
