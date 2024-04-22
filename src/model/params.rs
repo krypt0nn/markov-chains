@@ -16,13 +16,13 @@ pub struct GenerationParams {
     /// then the most probable token is skipped.
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
-    pub temperature: f32,
+    pub temperature: f64,
 
     #[arg(long, default_value_t = 1.0)]
     /// Probability multiplier to skip the most probable token
     /// 
     /// See `temperature` for the formula.
-    pub temperature_alpha: f32,
+    pub temperature_alpha: f64,
 
     #[arg(long, default_value_t = 0.8)]
     /// Probability multiplier for the temperature
@@ -32,7 +32,7 @@ pub struct GenerationParams {
     /// then the most probable token is skipped.
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
-    pub repeat_penalty: f32,
+    pub repeat_penalty: f64,
 
     #[arg(long, default_value_t = 0.85)]
     /// When we should stop generating the text
@@ -41,7 +41,7 @@ pub struct GenerationParams {
     /// is an ending, then we stop generating new tokens.
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
-    pub end_weight: f32,
+    pub end_weight: f64,
 
     #[arg(long, default_value_t = 1)]
     /// Minimum length of the generated text

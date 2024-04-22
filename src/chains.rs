@@ -5,7 +5,7 @@ use crate::prelude::Dataset;
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Chains {
     /// (token, [(next token, percent of occurences)])
-    pub(crate) chains: HashMap<u64, Vec<(u64, f32)>>,
+    pub(crate) chains: HashMap<u64, Vec<(u64, f64)>>,
     pub(crate) beginnings: HashSet<u64>,
     pub(crate) endings: HashSet<u64>
 }
@@ -55,7 +55,7 @@ impl Chains {
                 .sum::<u64>();
 
             for (token, amount) in continuations_sized {
-                continuations.push((token, amount as f32 / total_tokens as f32));
+                continuations.push((token, amount as f64 / total_tokens as f64));
             }
 
             continuations.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
@@ -91,11 +91,11 @@ impl Chains {
     }
 
     #[inline]
-    pub fn get_continuations(&self, token: u64) -> Option<&Vec<(u64, f32)>> {
+    pub fn get_continuations(&self, token: u64) -> Option<&Vec<(u64, f64)>> {
         self.chains.get(&token)
     }
 
-    pub fn get_probability(&self, first_token: u64, next_token: u64) -> Option<f32> {
+    pub fn get_probability(&self, first_token: u64, next_token: u64) -> Option<f64> {
         let continuations = self.get_continuations(first_token)?;
 
         let prob = continuations.iter()

@@ -23,7 +23,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
             // If the current token is an ending
             if self.model.chains.is_ending(current) {
                 // Get random seed from 0.0 to 1.0
-                let random_seed = rand::random::<u32>() as f32 / u32::MAX as f32;
+                let random_seed = rand::random::<u32>() as f64 / u32::MAX as f64;
 
                 // If the random seed is greater than the end weight
                 if random_seed >= self.params.end_weight {
@@ -74,7 +74,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // While there are continuations
         while continuations.len() > 1 {
             // Get random seed from 0.0 to 1.0
-            let random_seed = rand::random::<u32>() as f32 / u32::MAX as f32;
+            let random_seed = rand::random::<u32>() as f64 / u32::MAX as f64;
 
             // Get the next most probable token
             let next = continuations.last().unwrap().0;
