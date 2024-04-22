@@ -32,6 +32,11 @@ impl TokenizedMessages {
             messages: tokenized
         })
     }
+
+    #[inline]
+    pub fn messages(&self) -> &HashSet<Vec<u64>> {
+        &self.messages
+    }
 }
 
 mod tests {
