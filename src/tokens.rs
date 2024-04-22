@@ -4,8 +4,8 @@ use crate::prelude::Messages;
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Tokens {
-    pub(crate) token_word: HashMap<u32, String>,
-    pub(crate) word_token: HashMap<String, u32>
+    pub(crate) token_word: HashMap<u64, String>,
+    pub(crate) word_token: HashMap<String, u64>
 }
 
 impl Tokens {
@@ -16,10 +16,10 @@ impl Tokens {
         for message in messages.messages() {
             for word in message {
                 if !word_token.contains_key(word) {
-                    let mut token = rand::random::<u32>();
+                    let mut token = rand::random::<u64>();
 
                     while token_word.contains_key(&token) {
-                        token = rand::random::<u32>();
+                        token = rand::random::<u64>();
                     }
 
                     word_token.insert(word.to_owned(), token);
@@ -38,7 +38,7 @@ impl Tokens {
         for (word, mut token) in tokens.word_token {
             if !self.word_token.contains_key(&word) {
                 while self.token_word.contains_key(&token) {
-                    token = rand::random::<u32>();
+                    token = rand::random::<u64>();
                 }
 
                 self.word_token.insert(word.clone(), token);
@@ -50,12 +50,12 @@ impl Tokens {
     }
 
     #[inline]
-    pub fn find_token(&self, word: impl AsRef<str>) -> Option<u32> {
+    pub fn find_token(&self, word: impl AsRef<str>) -> Option<u64> {
         self.word_token.get(word.as_ref()).copied()
     }
 
     #[inline]
-    pub fn find_word(&self, token: u32) -> Option<&String> {
+    pub fn find_word(&self, token: u64) -> Option<&String> {
         self.token_word.get(&token)
     }
 
@@ -69,7 +69,7 @@ impl Tokens {
         self.token_word.is_empty()
     }
 
-    pub fn detokenize_message(&self, tokens: &[u32]) -> anyhow::Result<String> {
+    pub fn detokenize_message(&self, tokens: &[u64]) -> anyhow::Result<String> {
         let mut words = Vec::with_capacity(tokens.len());
 
         for token in tokens {

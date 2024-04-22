@@ -32,7 +32,7 @@ impl Model {
     }
 
     #[inline]
-    pub fn generate<'a>(&'a self, beginning: impl Into<Vec<u32>>, params: &'a GenerationParams) -> TokenGenerator<'a> {
+    pub fn generate<'a>(&'a self, beginning: impl Into<Vec<u64>>, params: &'a GenerationParams) -> TokenGenerator<'a> {
         TokenGenerator {
             chain: beginning.into(),
             params,

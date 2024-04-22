@@ -6,13 +6,13 @@ use crate::prelude::{
 };
 
 pub struct TokenGenerator<'a> {
-    pub(crate) chain: Vec<u32>,
+    pub(crate) chain: Vec<u64>,
     pub(crate) params: &'a GenerationParams,
     pub(crate) model: &'a Model
 }
 
 impl<'a> Iterator for TokenGenerator<'a> {
-    type Item = anyhow::Result<u32>;
+    type Item = anyhow::Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Get current token from the chain history
@@ -82,7 +82,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
             // Find all the repeats of the next token
             let repeats = self.chain.iter()
                 .filter(|token| **token == next)
-                .sum::<u32>();
+                .sum::<u64>();
 
             // If the random seed is greater than the repeat penalty
             if random_seed >= self.params.repeat_penalty.powi(repeats as i32) {

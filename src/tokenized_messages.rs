@@ -7,7 +7,7 @@ use crate::prelude::{
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TokenizedMessages {
-    pub(crate) messages: HashSet<Vec<u32>>
+    pub(crate) messages: HashSet<Vec<u64>>
 }
 
 impl TokenizedMessages {

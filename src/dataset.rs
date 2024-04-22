@@ -7,13 +7,13 @@ use crate::prelude::{
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Dataset {
     /// (messages, weight)
-    pub(crate) messages: Vec<(TokenizedMessages, u32)>,
+    pub(crate) messages: Vec<(TokenizedMessages, u64)>,
     pub(crate) tokens: Tokens
 }
 
 impl Dataset {
     #[inline]
-    pub fn with_messages(mut self, messages: TokenizedMessages, weight: u32) -> Self {
+    pub fn with_messages(mut self, messages: TokenizedMessages, weight: u64) -> Self {
         self.messages.push((messages, weight));
 
         self
@@ -27,7 +27,7 @@ impl Dataset {
     }
 
     #[inline]
-    pub fn messages(&self) -> &[(TokenizedMessages, u32)] {
+    pub fn messages(&self) -> &[(TokenizedMessages, u64)] {
         &self.messages
     }
 

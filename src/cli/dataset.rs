@@ -22,7 +22,7 @@ pub enum CliDatasetCommand {
 
         #[arg(short, long, default_value_t = 1)]
         /// Messages weight in the dataset
-        weight: u32,
+        weight: u64,
 
         #[arg(short, long)]
         /// Path to the dataset output
@@ -41,7 +41,7 @@ pub enum CliDatasetCommand {
 
         #[arg(short, long, default_value_t = 1)]
         /// Messages weight
-        weight: u32,
+        weight: u64,
 
         #[arg(short, long)]
         /// Path to the dataset output

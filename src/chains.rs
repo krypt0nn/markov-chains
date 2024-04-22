@@ -5,14 +5,14 @@ use crate::prelude::Dataset;
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Chains {
     /// (token, [(next token, percent of occurences)])
-    pub(crate) chains: HashMap<u32, Vec<(u32, f32)>>,
-    pub(crate) beginnings: HashSet<u32>,
-    pub(crate) endings: HashSet<u32>
+    pub(crate) chains: HashMap<u64, Vec<(u64, f32)>>,
+    pub(crate) beginnings: HashSet<u64>,
+    pub(crate) endings: HashSet<u64>
 }
 
 impl Chains {
     pub fn build_from_dataset(dataset: &Dataset) -> Self {
-        let mut raw_chains: HashMap<u32, Vec<(u32, u32)>> = HashMap::new();
+        let mut raw_chains: HashMap<u64, Vec<(u64, u64)>> = HashMap::new();
         let mut beginnings = HashSet::new();
         let mut endings = HashSet::new();
 
@@ -52,7 +52,7 @@ impl Chains {
 
             let total_tokens = continuations_sized.values()
                 .copied()
-                .sum::<u32>();
+                .sum::<u64>();
 
             for (token, amount) in continuations_sized {
                 continuations.push((token, amount as f32 / total_tokens as f32));
@@ -81,21 +81,21 @@ impl Chains {
     }
 
     #[inline]
-    pub fn is_beginning(&self, token: u32) -> bool {
+    pub fn is_beginning(&self, token: u64) -> bool {
         self.beginnings.contains(&token)
     }
 
     #[inline]
-    pub fn is_ending(&self, token: u32) -> bool {
+    pub fn is_ending(&self, token: u64) -> bool {
         self.endings.contains(&token)
     }
 
     #[inline]
-    pub fn get_continuations(&self, token: u32) -> Option<&Vec<(u32, f32)>> {
+    pub fn get_continuations(&self, token: u64) -> Option<&Vec<(u64, f32)>> {
         self.chains.get(&token)
     }
 
-    pub fn get_probability(&self, first_token: u32, next_token: u32) -> Option<f32> {
+    pub fn get_probability(&self, first_token: u64, next_token: u64) -> Option<f32> {
         let continuations = self.get_continuations(first_token)?;
 
         let prob = continuations.iter()
@@ -105,11 +105,11 @@ impl Chains {
         Some(prob)
     }
 
-    pub fn calculate_complexity(&self) -> u32 {
+    pub fn calculate_complexity(&self) -> u64 {
         let mut complexity = 0;
 
         for continuations in self.chains.values() {
-            complexity += continuations.len() as u32;
+            complexity += continuations.len() as u64;
         }
 
         complexity
