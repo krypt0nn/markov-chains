@@ -2,7 +2,7 @@ use clap::Args;
 
 #[derive(Debug, Clone, Copy, Args)]
 pub struct GenerationParams {
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, default_value_t = 15)]
     /// Number of tokens used to generate the next token
     /// 
     /// If set to 0, then only the previous token is used.
@@ -26,7 +26,7 @@ pub struct GenerationParams {
     /// See `temperature` for the formula.
     pub temperature_alpha: f64,
 
-    #[arg(long, default_value_t = 0.6)]
+    #[arg(long, default_value_t = 0.4)]
     /// Probability to skip repeated token
     /// 
     /// If `random_seed > repeat_penalty^[repeats number]`,
@@ -59,14 +59,14 @@ pub struct GenerationParams {
     /// Minimum length of the generated text
     pub min_length: usize,
 
-    #[arg(long, default_value_t = 25)]
+    #[arg(long, default_value_t = 50)]
     /// Maximum length of the generated text
     /// 
     /// If the current token is an ending, and we have
     /// generated `max_len` tokens, then we stop generating new tokens.
     pub max_len: usize,
 
-    #[arg(long, default_value_t = 100)]
+    #[arg(long, default_value_t = 150)]
     /// Absolute maximum length of the generated text
     /// 
     /// Breaks new tokens generation if we have generated
@@ -78,15 +78,15 @@ impl Default for GenerationParams {
     #[inline]
     fn default() -> Self {
         Self {
-            context_window: 5,
+            context_window: 15,
             temperature: 0.85,
             temperature_alpha: 1.0,
-            repeat_penalty: 0.8,
+            repeat_penalty: 0.4,
             k_normal: 0.95,
             end_weight: 0.85,
             min_length: 1,
-            max_len: 25,
-            force_break_len: 100
+            max_len: 50,
+            force_break_len: 150
         }
     }
 }
