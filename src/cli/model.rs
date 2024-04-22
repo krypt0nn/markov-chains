@@ -112,7 +112,7 @@ impl CliModelCommand {
                         match token {
                             Ok(token) => {
                                 let Some(word) = tokens.find_word(token) else {
-                                    println!("\n  Failed to find word for token: {token}");
+                                    print!("\n\n  Failed to find word for token: {token}");
 
                                     break;
                                 };
@@ -123,7 +123,7 @@ impl CliModelCommand {
                             }
 
                             Err(err) => {
-                                println!("\n  Failed to generate: {err}");
+                                print!("\n\n  Failed to generate: {err}");
 
                                 break;
                             }

@@ -64,9 +64,9 @@ impl Default for GenerationParams {
             context_window: 3,
             temperature: 0.15,
             temperature_alpha: 1.0,
-            repeat_penalty: 1.0,
+            repeat_penalty: 1.1,
             end_weight: 1.0,
-            end_height: 0.7,
+            end_height: 0.85,
             min_length: 1,
             max_len: 25,
             force_break_len: 100
