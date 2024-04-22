@@ -48,6 +48,18 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // Get possible continuations for the current token
         let mut continuations = self.model.chains.get_continuations(current)?.clone();
 
+        // Find offset according to the normal distribution
+        let offset = ((1.0 - self.params.k_normal) * continuations.len() as f64).floor() as usize / 2;
+
+        // If there's less possible variants than expected
+        if continuations.len() <= offset * 2 {
+            // Stop tokens generation
+            return None;
+        }
+
+        // Remove most and least probable variants
+        continuations = continuations[offset..continuations.len() - offset].to_vec();
+
         // If there are no continuations
         if continuations.is_empty() {
             // Stop tokens generation

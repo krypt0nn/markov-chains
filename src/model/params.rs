@@ -34,6 +34,13 @@ pub struct GenerationParams {
     /// `random_seed` is a random number from 0.0 to 1.0.
     pub repeat_penalty: f64,
 
+    #[arg(long, default_value_t = 0.95)]
+    /// Percent of tokens to keep from the normal distribution
+    /// 
+    /// Other tokens will be removed equally from the beginning
+    /// (least probable) and end (most probable).
+    pub k_normal: f64,
+
     #[arg(long, default_value_t = 0.85)]
     /// When we should stop generating the text
     /// 
@@ -70,6 +77,7 @@ impl Default for GenerationParams {
             temperature: 0.15,
             temperature_alpha: 1.0,
             repeat_penalty: 0.8,
+            k_normal: 0.95,
             end_weight: 0.85,
             min_length: 1,
             max_len: 25,
