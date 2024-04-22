@@ -4,10 +4,9 @@ use std::io::Write;
 use clap::Subcommand;
 
 use crate::prelude::{
-    Tokens,
-    TokenizedMessages,
-    Model,
-    GenerationParams
+    Dataset,
+    GenerationParams,
+    Model
 };
 
 #[derive(Subcommand)]
@@ -15,8 +14,8 @@ pub enum CliModelCommand {
     /// Build language model
     Build {
         #[arg(short, long)]
-        /// Path to the tokenized messages bundle
-        messages: PathBuf,
+        /// Path to the dataset bundle
+        dataset: PathBuf,
 
         #[arg(short, long)]
         /// Path to the model output
@@ -29,10 +28,6 @@ pub enum CliModelCommand {
         /// Path to the model
         model: PathBuf,
 
-        #[arg(short, long)]
-        /// Path to the tokens bundle
-        tokens: PathBuf,
-
         #[command(flatten)]
         params: GenerationParams
     }
@@ -42,10 +37,10 @@ impl CliModelCommand {
     #[inline]
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            Self::Build { messages, output } => {
-                println!("Reading tokenized messages bundle...");
+            Self::Build { dataset, output } => {
+                println!("Reading dataset bundle...");
 
-                let messages = postcard::from_bytes::<TokenizedMessages>(&std::fs::read(messages)?)?;
+                let messages = postcard::from_bytes::<Dataset>(&std::fs::read(dataset)?)?;
 
                 println!("Building model...");
 
@@ -58,29 +53,27 @@ impl CliModelCommand {
                 println!("Done");
             }
 
-            Self::Load { model, tokens, params } => {
+            Self::Load { model, params } => {
                 println!("Reading model...");
 
                 let model = postcard::from_bytes::<Model>(&std::fs::read(model)?)?;
 
-                println!("Reading tokens bundle...");
-
-                let tokens = postcard::from_bytes::<Tokens>(&std::fs::read(tokens)?)?;
-
                 println!("Starting model...");
-
-                let input_prefix = format!("complexity: {} > ", model.complexity());
 
                 let stdin = std::io::stdin();
                 let mut stdout = std::io::stdout();
 
-                stdout.write_all(b"\n")?;
-                stdout.flush()?;
+                println!();
+                println!("  Model loaded:");
+                println!("        Tokens: {}", model.tokens.len());
+                println!("        Chains: {}", model.chains.len());
+                println!("    Complexity: {}", model.chains.calculate_complexity());
+                println!();
 
                 loop {
                     let mut request = String::new();
 
-                    stdout.write_all(input_prefix.as_bytes())?;
+                    stdout.write_all(b"> ")?;
                     stdout.flush()?;
 
                     stdin.read_line(&mut request)?;
@@ -88,7 +81,7 @@ impl CliModelCommand {
                     let request = request.split_whitespace()
                         .filter(|word| !word.is_empty())
                         .map(|word| word.to_lowercase())
-                        .map(|word| tokens.find_token(word))
+                        .map(|word| model.tokens.find_token(word))
                         .collect::<Option<Vec<_>>>();
 
                     let Some(request) = request else {
@@ -103,7 +96,7 @@ impl CliModelCommand {
                     stdout.flush()?;
 
                     for token in &request {
-                        stdout.write_all(tokens.find_word(*token).unwrap().as_bytes())?;
+                        stdout.write_all(model.tokens.find_word(*token).unwrap().as_bytes())?;
                         stdout.write_all(b" ")?;
                         stdout.flush()?;
                     }
@@ -111,7 +104,7 @@ impl CliModelCommand {
                     for token in model.generate(request.clone(), params) {
                         match token {
                             Ok(token) => {
-                                let Some(word) = tokens.find_word(token) else {
+                                let Some(word) = model.tokens.find_word(token) else {
                                     print!("\n\n  Failed to find word for token: {token}");
 
                                     break;

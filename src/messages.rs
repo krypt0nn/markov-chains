@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Messages {
-    messages: HashSet<Vec<String>>
+    pub(crate) messages: HashSet<Vec<String>>
 }
 
 impl Messages {

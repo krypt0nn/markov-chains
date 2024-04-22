@@ -2,10 +2,12 @@ use clap::{Parser, Subcommand};
 
 mod messages;
 mod tokens;
+mod dataset;
 mod model;
 
 use messages::CliMessagesCommand;
 use tokens::CliTokensCommand;
+use dataset::CliDatasetCommand;
 use model::CliModelCommand;
 
 #[derive(Parser)]
@@ -36,6 +38,13 @@ pub enum Commands {
         action: CliTokensCommand
     },
 
+    /// Work with dataset
+    Dataset {
+        #[command(subcommand)]
+        action: CliDatasetCommand
+    },
+
+    /// Work with language model
     Model {
         #[command(subcommand)]
         action: CliModelCommand
@@ -48,6 +57,7 @@ impl Commands {
         match self {
             Self::Messages { action } => action.execute(),
             Self::Tokens { action } => action.execute(),
+            Self::Dataset { action } => action.execute(),
             Self::Model { action } => action.execute()
         }
     }

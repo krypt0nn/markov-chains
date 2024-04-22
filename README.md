@@ -8,8 +8,11 @@ We've randomly decided to play with [Markov chains](https://en.wikipedia.org/wik
 
 1. Generate messages bundle. Those are filtered lists of pre-processed words
 
-Command: `markov-chains messages parse --path <input file> [--path <input file 2> ...] --output <output file>`
-Example: `markov-chains messages parse --path kleden.txt --output kleden.bundle`
+> cargo run -- messages parse --path inputs/json/kleden.txt --output outputs/kleden.bundle
+> 
+> cargo run -- messages parse --path inputs/text/political-economy.txt --output outputs/messages/political-economy.bundle
+> 
+> cargo run -- messages parse --path inputs/text/state-and-revolution.txt --output outputs/messages/state-and-revolution.bundle
 
 Accepted input files formats are json strings and plain text lines:
 
@@ -23,25 +26,41 @@ Plain text lines:
 > Political economy belongs to the category of the social sciences.\
 > The basis of the life of society is material production.
 
-2. Create tokens from the parsed messages
+2. Merge books to one messages set
 
-Command: `markov-chains tokens parse --path <input file> --output <output file>`
-Example: `markov-chains tokens parse --path kleden.bundle --output tokens.bundle`
+> cargo run -- messages merge --path outputs/messages/political-economy.bundle --path outputs/messages/state-and-revolution.bundle --output outputs/messages/background.bundle
 
-3. Tokenize parsed messages using generated tokens
+3. Create tokens from the messages sets
 
-Command: `markov-chains messages tokenize --messages <input file> --tokens <tokens file> --output <output file>`
-Example: `markov-chains messages tokenize --messages kleden.bundle --tokens tokens.bundle --output tokenized-kleden.bundle`
+> cargo run -- tokens parse --path outputs/messages/kleden.bundle --output outputs/tokens/kleden.bundle
+> 
+> cargo run -- tokens parse --path outputs/messages/background.bundle --output outputs/tokens/background.bundle
 
-4. Build language model
+4. Merge tokens to the single bundle
 
-Command: `markov-chains model build --messages <input file> --output <output file>`
-Example: `markov-chains model build --messages tokenized-kleden.bundle --output model.bundle`
+> cargo run -- tokens merge --path outputs/tokens/background.bundle --path outputs/tokens/kleden.bundle --output outputs/tokens/tokens.bundle
 
-5. Load language model
+5. Tokenize prepared messages bundles
 
-Command: `markov-chains model load --model <model file> --tokens <tokens file> [model params]`
-Example: `markov-chains model load --model model.bundle --tokens tokens.bundle`
+> cargo run -- messages tokenize --messages outputs/messages/background.bundle --tokens outputs/tokens/tokens.bundle --output outputs/tokenized/background.bundle
+> 
+> cargo run -- messages tokenize --messages outputs/messages/kleden.bundle --tokens outputs/tokens/tokens.bundle --output outputs/tokenized/kleden.bundle
+
+6. Create new dataset from the background messages bundle
+
+> cargo run -- dataset create --messages outputs/tokenized/background.bundle --tokens outputs/tokens/tokens.bundle --output outputs/datasets/kleden2.bundle
+
+7. Extend this dataset with the kleden's messages bundle with bigger weight (10)
+
+> cargo run -- dataset add-messages --path outputs/datasets/kleden2.bundle --messages outputs/tokenized/kleden.bundle --weight 10 --output outputs/datasets/kleden2.bundle
+
+8. Build the model
+
+> cargo run -- model build --dataset outputs/datasets/kleden2.bundle --output outputs/models/kleden2.model
+
+9. Load model
+
+> cargo run -- model load --dataset outputs/datasets/kleden2.bundle
 
 There's a bunch of params you can change to play with the model. Most important ones are `--context-window` which configures the "intelligence" of the model, and `--min-length` which can force model to keep generating new text.
 

@@ -24,7 +24,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // If the chain's length is greater than the minimum length
         if self.chain.len() > self.params.min_length {
             // If the current token is an ending
-            if self.model.is_ending(current) {
+            if self.model.chains.is_ending(current) {
                 // If the random seed is greater than the end height
                 if random_seed * self.params.end_weight >= self.params.end_height {
                     // Stop tokens generation
@@ -46,10 +46,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
         }
 
         // Get possible continuations for the current token
-        let mut continuations = match self.model.get_continuations(current) {
-            Ok(continuations) => continuations,
-            Err(err) => return Some(Err(err))
-        };
+        let mut continuations = self.model.chains.get_continuations(current)?.clone();
 
         // If there are no continuations
         if continuations.is_empty() {
@@ -64,14 +61,8 @@ impl<'a> Iterator for TokenGenerator<'a> {
         for continuation in &mut continuations {
             // Iterate over the context window
             for i in 1..chain_window.len() {
-                // Find the probability of the continuation
-                let prob = match self.model.get_probability(chain_window[i - 1], chain_window[i]) {
-                    Ok(prob) => prob,
-                    Err(err) => return Some(Err(err))
-                };
-
                 // Multiply the probability by the continuation's probability
-                continuation.1 *= prob;
+                continuation.1 *= self.model.chains.get_probability(chain_window[i - 1], chain_window[i])?;
             }
         }
 
