@@ -44,6 +44,17 @@ pub enum CliModelCommand {
 
         #[command(flatten)]
         params: GenerationParams
+    },
+
+    /// Check the word appearance in the model
+    CheckWord {
+        #[arg(short, long)]
+        /// Path to the model
+        path: PathBuf,
+
+        #[arg(short, long)]
+        /// Word to check
+        word: String
     }
 }
 
@@ -177,6 +188,53 @@ impl CliModelCommand {
 
                     stdout.write_all(b"\n\n")?;
                     stdout.flush()?;
+                }
+            }
+
+            Self::CheckWord { path, word } => {
+                println!("Reading model...");
+
+                let model = postcard::from_bytes::<Model>(&std::fs::read(path)?)?;
+
+                println!("Getting continuations...");
+
+                let Some(token) = model.tokens().find_token(word) else {
+                    anyhow::bail!("Could not find token for word: {word}");
+                };
+
+                let Some(mut continuations) = model.chains().get_continuations(token).cloned() else {
+                    anyhow::bail!("Could not find continuations for token: {token}");
+                };
+
+                println!("Getting predecessors...");
+
+                let mut predecessors = Vec::new();
+
+                for (from_token, variants) in &model.chains().chains {
+                    if let Some((_, prob)) = variants.iter().find(|(t, _)| *t == token) {
+                        predecessors.push((*from_token, *prob));
+                    }
+                }
+
+                continuations.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                predecessors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+                println!();
+                println!("Top 10 predecessors:");
+
+                for (from_token, prob) in predecessors.into_iter().take(10) {
+                    let word = model.tokens().find_word(from_token).unwrap();
+
+                    println!("  [{word}]: {:.5}%", prob * 100.0);
+                }
+
+                println!();
+                println!("Top 10 ancestors:");
+
+                for (to_token, prob) in continuations.into_iter().take(10) {
+                    let word = model.tokens().find_word(to_token).unwrap();
+
+                    println!("  [{word}]: {:.5}%", prob * 100.0);
                 }
             }
         }
