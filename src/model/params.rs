@@ -9,11 +9,13 @@ pub struct GenerationParams {
     /// Affects performance the most.
     pub context_window: usize,
 
-    #[arg(long, default_value_t = 0.15)]
-    /// Probability to skip the most probable token
+    #[arg(long, default_value_t = 0.85)]
+    /// Probability to keep the most probable token
     /// 
-    /// If `random_seed < temperature * temperature_alpha^[token number]`,
+    /// If `random_seed > temperature * temperature_alpha^[token number]`,
     /// then the most probable token is skipped.
+    /// 
+    /// Lower temperature generates more random text.
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
     pub temperature: f64,
@@ -25,11 +27,12 @@ pub struct GenerationParams {
     pub temperature_alpha: f64,
 
     #[arg(long, default_value_t = 0.6)]
-    /// Probability multiplier for the temperature
-    /// when the generated token was already generated before
+    /// Probability to skip repeated token
     /// 
-    /// If `random_seed < repeat_penalty^[repeats number]`,
-    /// then the most probable token is skipped.
+    /// If `random_seed > repeat_penalty^[repeats number]`,
+    /// then the repeated token is skipped.
+    /// 
+    /// Lower penalty skips repeated tokens more aggressively.
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
     pub repeat_penalty: f64,
@@ -39,12 +42,14 @@ pub struct GenerationParams {
     /// 
     /// Other tokens will be removed equally from the beginning
     /// (least probable) and end (most probable).
+    /// 
+    /// Lower value will generate more "bot-looking" (weird) text.
     pub k_normal: f64,
 
     #[arg(long, default_value_t = 0.85)]
     /// When we should stop generating the text
     /// 
-    /// If `random_seed >= end_weight` and the current token
+    /// If `random_seed > end_weight` and the current token
     /// is an ending, then we stop generating new tokens.
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
@@ -74,7 +79,7 @@ impl Default for GenerationParams {
     fn default() -> Self {
         Self {
             context_window: 5,
-            temperature: 0.15,
+            temperature: 0.85,
             temperature_alpha: 1.0,
             repeat_penalty: 0.8,
             k_normal: 0.95,

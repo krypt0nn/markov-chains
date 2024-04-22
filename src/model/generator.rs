@@ -96,18 +96,31 @@ impl<'a> Iterator for TokenGenerator<'a> {
                 .filter(|token| **token == next)
                 .count();
 
-            // If the random seed is greater than the repeat penalty
-            if random_seed >= self.params.repeat_penalty.powi(repeats as i32) {
-                // Stop tokens generation
-                break;
+            // If the next token is repeated
+            if repeats > 0 {
+                // If the random seed is lower than the repeat penalty
+                // 
+                // repeat_penalty: 0.5 -> 0.25 -> 0.125 -> 0.0625 -> ...
+                // 
+                // lower repeat_penalty => lower chance that the if statement works
+                // => higher chance that the next token is skipped
+                if random_seed < self.params.repeat_penalty.powi(repeats as i32) {
+                    // Keep current token as the next one
+                    break;
+                }
             }
 
             // Calculate the temperature
             let temperature = self.params.temperature * self.params.temperature_alpha.powi(self.chain.len() as i32);
 
-            // If the random seed is greater than the temperature
-            if random_seed >= temperature {
-                // Stop tokens generation
+            // If the random seed is lower than the temperature
+            // 
+            // temperature: 0.5 -> 0.25 -> 0.125 -> 0.0625 -> ...
+            // 
+            // lower temperature => lower chance that the if statement works
+            // => higher chance that the next token is skipped
+            if random_seed < temperature {
+                // Keep current token as the next one
                 break;
             }
 
