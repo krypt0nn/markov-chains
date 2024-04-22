@@ -1,0 +1,27 @@
+[package]
+name = "markov-chains"
+version = "1.0.0"
+description = "Haha funny text generator with markov chains"
+authors = ["Nikita Podvirnyi <krypt0nn@vk.com>"]
+homepage = "https://github.com/krypt0nn/markov-chains"
+repository = "https://github.com/krypt0nn/markov-chains"
+license = "MIT"
+edition = "2021"
+
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+postcard = { version = "1.0", features = ["alloc"] }
+
+anyhow = "1.0"
+rand = "0.8"
+
+clap = { version = "4.5", features = ["derive"] }
