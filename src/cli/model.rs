@@ -4,6 +4,9 @@ use std::io::Write;
 use clap::Subcommand;
 
 use crate::prelude::{
+    Messages,
+    Tokens,
+    TokenizedMessages,
     Dataset,
     GenerationParams,
     Model
@@ -16,6 +19,17 @@ pub enum CliModelCommand {
         #[arg(short, long)]
         /// Path to the dataset bundle
         dataset: PathBuf,
+
+        #[arg(short, long)]
+        /// Path to the model output
+        output: PathBuf
+    },
+
+    /// Build language model from plain messages files
+    FromScratch {
+        #[arg(short, long)]
+        /// Path to the plain messages file
+        messages: Vec<PathBuf>,
 
         #[arg(short, long)]
         /// Path to the model output
@@ -45,6 +59,44 @@ impl CliModelCommand {
                 println!("Building model...");
 
                 let model = Model::build(messages);
+
+                println!("Storing model...");
+
+                std::fs::write(output, postcard::to_allocvec(&model)?)?;
+
+                println!("Done");
+            }
+
+            Self::FromScratch { messages: paths, output } => {
+                println!("Parsing messages...");
+
+                let mut messages = Messages::default();
+
+                for path in paths {
+                    println!("Parsing {:?}...", path);
+
+                    let parsed = Messages::parse_from_messages(path)?;
+
+                    messages = messages.merge(parsed);
+                }
+
+                println!("Generating tokens...");
+
+                let tokens = Tokens::parse_from_messages(&messages);
+
+                println!("Tokenizing messages...");
+
+                let tokenized_messages = TokenizedMessages::tokenize_message(&messages, &tokens)?;
+
+                println!("Creating dataset...");
+
+                let dataset = Dataset::default()
+                    .with_messages(tokenized_messages, 1)
+                    .with_tokens(tokens);
+
+                println!("Building model...");
+
+                let model = Model::build(dataset);
 
                 println!("Storing model...");
 

@@ -33,3 +33,29 @@ impl TokenizedMessages {
         })
     }
 }
+
+mod tests {
+    #[test]
+    fn tokenize() -> anyhow::Result<()> {
+        use super::{Messages, Tokens, TokenizedMessages};
+
+        let messages = Messages::parse_from_lines(&[
+            String::from("Hello, World!"),
+            String::from("Example text")
+        ]);
+
+        let tokens = Tokens::parse_from_messages(&messages);
+
+        let tokenized = TokenizedMessages::tokenize_message(&messages, &tokens)?;
+
+        let hello = tokens.find_token("hello,").unwrap();
+        let world = tokens.find_token("world!").unwrap();
+        let example = tokens.find_token("example").unwrap();
+        let text = tokens.find_token("text").unwrap();
+
+        assert!(tokenized.messages.contains(&vec![hello, world]));
+        assert!(tokenized.messages.contains(&vec![example, text]));
+
+        Ok(())
+    }
+}

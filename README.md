@@ -2,17 +2,13 @@
 
 We've randomly decided to play with [Markov chains](https://en.wikipedia.org/wiki/Markov_chain) on my discord server, and I decided to release my results in github.
 
-## How to use
-
 > If you have any questions - refer to `markov-chains --help` or `markov-chains <command> --help`.
 
-1. Generate messages bundle. Those are filtered lists of pre-processed words
+## Simple example
 
-> cargo run -- messages parse --path inputs/json/kleden.txt --output outputs/kleden.bundle
-> 
-> cargo run -- messages parse --path inputs/text/political-economy.txt --output outputs/messages/political-economy.bundle
-> 
-> cargo run -- messages parse --path inputs/text/state-and-revolution.txt --output outputs/messages/state-and-revolution.bundle
+1. Build the model from the input text files
+
+> cargo run -- model from-scratch --path inputs/json/kleden.txt --output outputs/models/kleden1.bundle
 
 Accepted input files formats are json strings and plain text lines:
 
@@ -25,6 +21,22 @@ Plain text lines:
 
 > Political economy belongs to the category of the social sciences.\
 > The basis of the life of society is material production.
+
+2. Load model
+
+> cargo run -- model load --model outputs/models/kleden1.model
+
+There's a bunch of params you can change to play with the model. Most important ones are `--context-window` which configures the "intelligence" of the model, and `--min-length` which can force model to keep generating new text.
+
+## Complex example
+
+1. Generate messages bundle. Those are filtered lists of pre-processed words
+
+> cargo run -- messages parse --path inputs/json/kleden.txt --output outputs/messages/kleden.bundle
+> 
+> cargo run -- messages parse --path inputs/text/political-economy.txt --output outputs/messages/political-economy.bundle
+> 
+> cargo run -- messages parse --path inputs/text/state-and-revolution.txt --output outputs/messages/state-and-revolution.bundle
 
 2. Merge books to one messages set
 
@@ -60,9 +72,7 @@ Plain text lines:
 
 9. Load model
 
-> cargo run -- model load --dataset outputs/datasets/kleden2.bundle
-
-There's a bunch of params you can change to play with the model. Most important ones are `--context-window` which configures the "intelligence" of the model, and `--min-length` which can force model to keep generating new text.
+> cargo run -- model load --model outputs/models/kleden2.model
 
 Author: [Nikita Podvirnyi](https://github.com/krypt0nn)\
 Licensed under [MIT](LICENSE)

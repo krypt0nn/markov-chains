@@ -18,13 +18,13 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // Get current token from the chain history
         let current = self.chain.last().copied()?;
 
-        // Get random seed from 0.0 to 1.0
-        let random_seed = rand::random::<u32>() as f32 / u32::MAX as f32;
-
         // If the chain's length is greater than the minimum length
         if self.chain.len() > self.params.min_length {
             // If the current token is an ending
             if self.model.chains.is_ending(current) {
+                // Get random seed from 0.0 to 1.0
+                let random_seed = rand::random::<u32>() as f32 / u32::MAX as f32;
+
                 // If the random seed is greater than the end height
                 if random_seed * self.params.end_weight >= self.params.end_height {
                     // Stop tokens generation
@@ -69,7 +69,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // Sort the continuations by probability
         continuations.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
-        // dbg!(&continuations);
+        // dbg!(&continuations[continuations.len() - 3..]);
 
         // While there are continuations
         while continuations.len() > 1 {

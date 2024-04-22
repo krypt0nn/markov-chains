@@ -9,12 +9,20 @@ pub struct Messages {
 
 impl Messages {
     pub fn parse_from_messages(file: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let mut messages = HashSet::new();
-
         let file = std::fs::File::open(file)?;
 
-        for line in std::io::BufReader::new(file).lines() {
-            let line = line?.trim().to_string();
+        let lines = std::io::BufReader::new(file)
+            .lines()
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Self::parse_from_lines(&lines))
+    }
+
+    pub fn parse_from_lines(lines: &[String]) -> Self {
+        let mut messages = HashSet::new();
+
+        for line in lines {
+            let line = line.trim().to_string();
 
             let line = serde_json::from_str::<String>(&line)
                 .unwrap_or(line);
@@ -29,9 +37,9 @@ impl Messages {
             }
         }
 
-        Ok(Self {
+        Self {
             messages
-        })
+        }
     }
 
     #[inline]
@@ -44,5 +52,50 @@ impl Messages {
         self.messages.extend(messages.messages);
 
         self
+    }
+}
+
+mod tests {
+    #[test]
+    fn parse() {
+        use super::Messages;
+
+        let messages = Messages::parse_from_lines(&[
+            String::from("Hello, World!"),
+            String::from("Example text")
+        ]);
+
+        assert!(messages.messages().contains(&vec![
+            String::from("hello,"),
+            String::from("world!")
+        ]));
+
+        assert!(messages.messages().contains(&vec![
+            String::from("example"),
+            String::from("text")
+        ]));
+    }
+
+    #[test]
+    fn merging() {
+        use super::Messages;
+
+        let messages = Messages::default()
+            .merge(Messages::parse_from_lines(&[
+                String::from("Hello, World!")
+            ]))
+            .merge(Messages::parse_from_lines(&[
+                String::from("Example text")
+            ]));
+
+        assert!(messages.messages().contains(&vec![
+            String::from("hello,"),
+            String::from("world!")
+        ]));
+
+        assert!(messages.messages().contains(&vec![
+            String::from("example"),
+            String::from("text")
+        ]));
     }
 }

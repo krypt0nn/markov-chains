@@ -38,23 +38,20 @@ impl Chains {
 
         let mut chains = HashMap::new();
 
-        for (token, mut continuations_raw) in raw_chains {
-            let mut continuations_sized = Vec::new();
+        for (token, continuations_raw) in raw_chains {
+            let mut continuations_sized = HashMap::new();
 
-            while let Some((token, weight)) = continuations_raw.pop() {
-                let len = continuations_raw.len();
+            for (token, weight) in continuations_raw {
+                let value = continuations_sized.entry(token)
+                    .or_insert(0);
 
-                continuations_raw.retain(|(t, _)| *t != token);
-
-                let amount = (len - continuations_raw.len() + 1) as u32;
-
-                continuations_sized.push((token, amount * weight));
+                *value += weight;
             }
 
             let mut continuations = Vec::with_capacity(continuations_sized.len());
 
-            let total_tokens = continuations_sized.iter()
-                .map(|(_, num)| *num)
+            let total_tokens = continuations_sized.values()
+                .copied()
                 .sum::<u32>();
 
             for (token, amount) in continuations_sized {
@@ -116,5 +113,60 @@ impl Chains {
         }
 
         complexity
+    }
+}
+
+mod tests {
+    #[test]
+    fn build_chains() -> anyhow::Result<()> {
+        use crate::prelude::*;
+
+        let messages = Messages::parse_from_lines(&[
+            String::from("Hello, World!"),
+            String::from("Example text")
+        ]);
+
+        let tokens = Tokens::parse_from_messages(&messages);
+
+        let messages = TokenizedMessages::tokenize_message(&messages, &tokens)?;
+
+        let dataset = Dataset::default()
+            .with_messages(messages, 1)
+            .with_tokens(tokens);
+
+        // hello -> world
+        // example -> text
+        let chains = dataset.build_chains();
+
+        let hello = dataset.tokens.find_token("hello,").unwrap();
+        let world = dataset.tokens.find_token("world!").unwrap();
+        let example = dataset.tokens.find_token("example").unwrap();
+        let text = dataset.tokens.find_token("text").unwrap();
+
+        assert_eq!(chains.len(), 2);
+
+        assert!(chains.is_beginning(hello));
+        assert!(!chains.is_beginning(world));
+        assert!(chains.is_beginning(example));
+        assert!(!chains.is_beginning(text));
+
+        assert!(!chains.is_ending(hello));
+        assert!(chains.is_ending(world));
+        assert!(!chains.is_ending(example));
+        assert!(chains.is_ending(text));
+
+        assert_eq!(chains.get_continuations(hello), Some(&vec![(world, 1.0)]));
+        assert_eq!(chains.get_continuations(example), Some(&vec![(text, 1.0)]));
+
+        assert_eq!(chains.get_continuations(world), None);
+        assert_eq!(chains.get_continuations(text), None);
+
+        assert_eq!(chains.get_probability(hello, world), Some(1.0));
+        assert_eq!(chains.get_probability(example, text), Some(1.0));
+
+        assert_eq!(chains.get_probability(world, hello), None);
+        assert_eq!(chains.get_probability(text, example), None);
+
+        Ok(())
     }
 }
