@@ -25,8 +25,8 @@ impl<'a> Iterator for TokenGenerator<'a> {
                 // Get random seed from 0.0 to 1.0
                 let random_seed = rand::random::<u32>() as f32 / u32::MAX as f32;
 
-                // If the random seed is greater than the end height
-                if random_seed * self.params.end_weight >= self.params.end_height {
+                // If the random seed is greater than the end weight
+                if random_seed >= self.params.end_weight {
                     // Stop tokens generation
                     return None;
                 }
@@ -84,13 +84,17 @@ impl<'a> Iterator for TokenGenerator<'a> {
                 .filter(|token| **token == next)
                 .sum::<u32>();
 
+            // If the random seed is greater than the repeat penalty
+            if random_seed >= self.params.repeat_penalty.powi(repeats as i32) {
+                // Stop tokens generation
+                break;
+            }
+
             // Calculate the temperature
-            let temperature = self.params.temperature *
-                self.params.temperature_alpha.powi(self.chain.len() as i32) *
-                self.params.repeat_penalty.powi(repeats as i32);
+            let temperature = self.params.temperature * self.params.temperature_alpha.powi(self.chain.len() as i32);
 
             // If the random seed is greater than the temperature
-            if random_seed > temperature {
+            if random_seed >= temperature {
                 // Stop tokens generation
                 break;
             }
