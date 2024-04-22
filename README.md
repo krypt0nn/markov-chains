@@ -8,7 +8,7 @@ We've randomly decided to play with [Markov chains](https://en.wikipedia.org/wik
 
 1. Build the model from the input text files
 
-> cargo run -- model from-scratch --path inputs/json/kleden.txt --output outputs/models/kleden1.bundle
+> cargo run -- model from-scratch --messages inputs/json/kleden.txt --output outputs/models/kleden1.model
 
 Accepted input files formats are json strings and plain text lines:
 
