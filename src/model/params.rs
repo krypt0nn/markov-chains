@@ -1,4 +1,36 @@
-use clap::Args;
+use clap::{
+    Args,
+    ValueEnum
+};
+
+use clap::builder::{
+    PossibleValue,
+    EnumValueParser
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SmoothingAlgorithm {
+    /// Kneser–Ney smoothing - https://en.wikipedia.org/wiki/Kneser%E2%80%93Ney_smoothing
+    KneserNay,
+
+    /// Absolute discounting smoothing
+    AbsoluteDiscounting
+}
+
+impl ValueEnum for SmoothingAlgorithm {
+    #[inline]
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::KneserNay, Self::AbsoluteDiscounting]
+    }
+
+    #[inline]
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(match self {
+            Self::KneserNay => PossibleValue::new("kneser-ney"),
+            Self::AbsoluteDiscounting => PossibleValue::new("absolute-discounting"),
+        })
+    }
+}
 
 #[derive(Debug, Clone, Copy, Args)]
 pub struct GenerationParams {
@@ -46,6 +78,12 @@ pub struct GenerationParams {
     /// Lower value will generate more "bot-looking" (weird) text.
     pub k_normal: f64,
 
+    #[arg(
+        long,
+        value_parser = EnumValueParser::<SmoothingAlgorithm>::new()
+    )]
+    pub smoothing: Option<SmoothingAlgorithm>,
+
     #[arg(long, default_value_t = 1)]
     /// Minimum length of the generated text
     pub min_length: usize,
@@ -67,6 +105,7 @@ impl Default for GenerationParams {
             temperature_alpha: 1.0,
             repeat_penalty: 0.4,
             k_normal: 0.95,
+            smoothing: None,
             min_length: 1,
             max_len: 150
         }

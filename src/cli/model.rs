@@ -13,7 +13,7 @@ use crate::prelude::{
     Model
 };
 
-const DEFAULT_NGRAM_SIZE: usize = 2;
+const DEFAULT_NGRAM_SIZE: usize = 1;
 
 #[derive(Subcommand)]
 pub enum CliModelCommand {
@@ -132,12 +132,13 @@ impl CliModelCommand {
                 println!();
                 println!("  Model loaded:");
                 println!();
-                println!("    Tokens       :  {}", model.tokens.len());
-                println!("    Forward len  :  {}", model.transitions.forward_len());
-                println!("    Backward len :  {}", model.transitions.backward_len());
-                println!("    Complexity   :  {}", model.transitions.calc_complexity());
-                println!("    Variety      :  {:.5}%", model.transitions.calc_variety() * 100.0);
-                
+                println!("    Total tokens  :  {}", model.tokens.len());
+                println!("    Forward len   :  {}", model.transitions.forward_len());
+                println!("    Backward len  :  {}", model.transitions.backward_len());
+                println!("    Complexity    :  {}", model.transitions.calc_complexity());
+                println!("    Average paths :  {:.5}", model.transitions.calc_avg_paths());
+                println!("    Variety       :  {:.5}%", model.transitions.calc_variety() * 100.0);
+
                 if !model.headers().is_empty() {
                     println!();
                     println!("  Headers:");

@@ -49,6 +49,16 @@ impl<const SIZE: usize> Ngram<SIZE> {
         self.0[SIZE - 1]
     }
 
+    #[inline]
+    pub fn head(&self) -> &[u64] {
+        &self.0[..SIZE - 1]
+    }
+
+    #[inline]
+    pub fn tail(&self) -> &[u64] {
+        &self.0[1..]
+    }
+
     /// Construct list of ngrams from list of tokens
     pub fn construct(tokens: &[u64]) -> Vec<Self> {
         let mut extended_tokens = Vec::with_capacity(tokens.len() + SIZE + 1);

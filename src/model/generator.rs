@@ -1,8 +1,11 @@
 use std::iter::FusedIterator;
 
+use rayon::prelude::*;
+
 use crate::prelude::{
     Ngram,
     GenerationParams,
+    SmoothingAlgorithm,
     Model
 };
 
@@ -21,7 +24,6 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
 
         // Get possible continuations for the current token
         let mut forward_transitions = self.model.transitions.get_forward_transitions(current)?
-            .map(|(k, v)| (*k, *v))
             .collect::<Vec<_>>();
 
         // Find offset according to the normal distribution
@@ -41,6 +43,29 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
             // Stop tokens generation
             return None;
         }
+
+        // Apply smoothing function to the possible continuations
+        let mut forward_transitions = match &self.params.smoothing {
+            Some(SmoothingAlgorithm::AbsoluteDiscounting) => {
+                forward_transitions.into_par_iter()
+                    .flat_map(|(k, _)| {
+                        self.model.transitions.calc_absolute_discounting_smoothing(*k)
+                            .map(|prob| (*k, prob))
+                    })
+                    .collect::<Vec<_>>()
+            },
+
+            Some(SmoothingAlgorithm::KneserNay) => unimplemented!(),
+
+            None => {
+                forward_transitions.into_par_iter()
+                    .flat_map(|(k, _)| {
+                        self.model.transitions.get_forward_probability(current, *k)
+                            .map(|prob| (*k, prob))
+                    })
+                    .collect::<Vec<_>>()
+            }
+        };
 
         // // Get the context window from the chain history
         // let chain_window = &self.chain[self.chain.len().saturating_sub(self.params.context_window)..];

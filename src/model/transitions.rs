@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use rayon::prelude::*;
+
 use crate::prelude::{
     Dataset,
     Ngram
@@ -12,12 +14,16 @@ pub struct Transitions<const NGRAM_SIZE: usize> {
 
     /// count = backward_transitions\[current_ngram\]\[previous_ngram\]
     pub(crate) backward_transitions: HashMap<Ngram<NGRAM_SIZE>, HashMap<Ngram<NGRAM_SIZE>, u64>>,
+
+    /// count = total_occurences\[ngram\]
+    pub(crate) total_occurences: HashMap<Ngram<NGRAM_SIZE>, u64>
 }
 
 impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
     pub fn build_from_dataset(dataset: &Dataset) -> Self {
         let mut forward_transitions: HashMap<Ngram<NGRAM_SIZE>, HashMap<Ngram<NGRAM_SIZE>, u64>> = HashMap::new();
         let mut backward_transitions: HashMap<Ngram<NGRAM_SIZE>, HashMap<Ngram<NGRAM_SIZE>, u64>> = HashMap::new();
+        let mut total_occurences: HashMap<Ngram<NGRAM_SIZE>, u64> = HashMap::new();
 
         for (messages, weight) in &dataset.messages {
             for message in &messages.messages {
@@ -39,6 +45,8 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
                             .entry(message[i + 1])
                             .or_default() += *weight;
                     }
+
+                    *total_occurences.entry(message[i]).or_default() += 1;
                 }
             }
         }
@@ -66,7 +74,8 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
 
         Self {
             forward_transitions,
-            backward_transitions
+            backward_transitions,
+            total_occurences
         }
     }
 
@@ -93,6 +102,11 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
     }
 
     #[inline]
+    pub fn get_total_occurences(&self, ngram: Ngram<NGRAM_SIZE>) -> Option<u64> {
+        self.total_occurences.get(&ngram).copied()
+    }
+
+    #[inline]
     /// Calculate complexity of the chain
     /// 
     /// Complexity is the sum of the number of possible transitions for each ngram.
@@ -106,9 +120,15 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
     }
 
     #[inline]
+    /// Calculate average amount of paths per ngram
+    pub fn calc_avg_paths(&self) -> f64 {
+        self.calc_complexity() as f64 / self.forward_len() as f64
+    }
+
+    #[inline]
     /// Calculate variety of the chain
     pub fn calc_variety(&self) -> f64 {
-        let avg_paths = self.calc_complexity() as f64 / self.forward_len() as f64;
+        let avg_paths = self.calc_avg_paths();
 
         let more_than_avg_paths = self.forward_transitions.iter()
             .filter(|(k, _)| !k.is_part_start() && !k.is_part_end())
@@ -145,9 +165,32 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
         
     // }
 
-    // pub fn calc_absolute_discounting_smoothing(&self) -> f64 {
-        
-    // }
+    pub fn calc_absolute_discounting_smoothing(&self, ngram: Ngram<NGRAM_SIZE>) -> Option<f64> {
+        const DISCOUNT_VALUE: f64 = 0.75;
+
+        let ngram_occurences = self.get_total_occurences(ngram)? as f64;
+
+        let prefix_occurences = self.forward_transitions.par_iter()
+            .filter(|(key, _)| key.head() == ngram.head())
+            .flat_map(|(key, _)| self.get_total_occurences(*key))
+            .collect::<Vec<_>>();
+
+        let prefix_count = prefix_occurences.iter().sum::<u64>() as f64;
+
+        let discounted_count = if ngram_occurences > DISCOUNT_VALUE {
+            ngram_occurences - DISCOUNT_VALUE
+        } else {
+            0.0
+        };
+
+        let total_discounted_count = prefix_occurences.iter()
+            .map(|count| *count as f64 - DISCOUNT_VALUE)
+            .sum::<f64>();
+
+        let smoothed_probability = (discounted_count + DISCOUNT_VALUE * self.forward_len() as f64 * (total_discounted_count / prefix_count)) / prefix_count;
+
+        Some(smoothed_probability)
+    }
 
     // pub fn calc_knesser_nay_smoothing(&self) -> f64 {
 
