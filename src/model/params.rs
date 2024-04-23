@@ -11,7 +11,7 @@ use clap::builder::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SmoothingAlgorithm {
     /// Kneser–Ney smoothing - https://en.wikipedia.org/wiki/Kneser%E2%80%93Ney_smoothing
-    KneserNay,
+    KnesserNey,
 
     /// Absolute discounting smoothing
     AbsoluteDiscounting
@@ -20,13 +20,13 @@ pub enum SmoothingAlgorithm {
 impl ValueEnum for SmoothingAlgorithm {
     #[inline]
     fn value_variants<'a>() -> &'a [Self] {
-        &[Self::KneserNay, Self::AbsoluteDiscounting]
+        &[Self::KnesserNey, Self::AbsoluteDiscounting]
     }
 
     #[inline]
     fn to_possible_value(&self) -> Option<PossibleValue> {
         Some(match self {
-            Self::KneserNay => PossibleValue::new("kneser-ney"),
+            Self::KnesserNey => PossibleValue::new("knesser-ney"),
             Self::AbsoluteDiscounting => PossibleValue::new("absolute-discounting"),
         })
     }

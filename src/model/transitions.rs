@@ -165,6 +165,38 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
         
     // }
 
+    /// Kneser-Ney smoothing
+    /// 
+    /// Source: https://iq.opengenus.org/kneser-ney-smoothing-absolute-discounting
+    pub fn calc_knesser_nay_smoothing(&self, ngram: Ngram<NGRAM_SIZE>) -> Option<f64> {
+        const DISCOUNT_VALUE: f64 = 0.75;
+
+        let prefix_count = self.forward_transitions.par_iter()
+            .filter(|(key, _)| key.tail() == ngram.head())
+            .count();
+
+        let suffix_count = self.forward_transitions.par_iter()
+            .filter(|(key, _)| key.tail() == ngram.tail())
+            .count();
+
+        let continuation_probability = prefix_count as f64 / suffix_count as f64;
+
+        let ngram_occurences = self.get_total_occurences(ngram)? as f64;
+
+        let discounted_count = if ngram_occurences > DISCOUNT_VALUE {
+            ngram_occurences - DISCOUNT_VALUE
+        } else {
+            0.0
+        };
+
+        let smoothed_probability = discounted_count / self.get_total_occurences(ngram.head_ngram())? as f64 + DISCOUNT_VALUE * continuation_probability;
+
+        Some(smoothed_probability)
+    }
+
+    /// Absolute Discounting smoothing
+    /// 
+    /// Source: https://iq.opengenus.org/kneser-ney-smoothing-absolute-discounting
     pub fn calc_absolute_discounting_smoothing(&self, ngram: Ngram<NGRAM_SIZE>) -> Option<f64> {
         const DISCOUNT_VALUE: f64 = 0.75;
 
@@ -191,10 +223,6 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
 
         Some(smoothed_probability)
     }
-
-    // pub fn calc_knesser_nay_smoothing(&self) -> f64 {
-
-    // }
 }
 
 mod tests {

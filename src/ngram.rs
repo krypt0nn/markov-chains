@@ -55,8 +55,30 @@ impl<const SIZE: usize> Ngram<SIZE> {
     }
 
     #[inline]
+    pub fn head_ngram(&self) -> Self {
+        let mut ngram = [END_TOKEN; SIZE];
+
+        for i in 0..SIZE - 1 {
+            ngram[i] = self.0[i];
+        }
+
+        Self::new(ngram)
+    }
+
+    #[inline]
     pub fn tail(&self) -> &[u64] {
         &self.0[1..]
+    }
+
+    #[inline]
+    pub fn tail_ngram(&self) -> Self {
+        let mut ngram = [START_TOKEN; SIZE];
+
+        for i in 1..SIZE {
+            ngram[i] = self.0[i];
+        }
+
+        Self::new(ngram)
     }
 
     /// Construct list of ngrams from list of tokens

@@ -53,9 +53,16 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
                             .map(|prob| (*k, prob))
                     })
                     .collect::<Vec<_>>()
-            },
+            }
 
-            Some(SmoothingAlgorithm::KneserNay) => unimplemented!(),
+            Some(SmoothingAlgorithm::KnesserNey) => {
+                forward_transitions.into_par_iter()
+                    .flat_map(|(k, _)| {
+                        self.model.transitions.calc_knesser_nay_smoothing(*k)
+                            .map(|prob| (*k, prob))
+                    })
+                    .collect::<Vec<_>>()
+            }
 
             None => {
                 forward_transitions.into_par_iter()
