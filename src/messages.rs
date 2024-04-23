@@ -8,17 +8,27 @@ pub struct Messages {
 }
 
 impl Messages {
+    #[inline]
     pub fn parse_from_messages(file: impl AsRef<Path>) -> anyhow::Result<Self> {
+        Self::parse_from_messages_with_filter(file, |word| word.to_lowercase())
+    }
+
+    pub fn parse_from_messages_with_filter(file: impl AsRef<Path>, filter: impl Fn(&str) -> String) -> anyhow::Result<Self> {
         let file = std::fs::File::open(file)?;
 
         let lines = std::io::BufReader::new(file)
             .lines()
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self::parse_from_lines(&lines))
+        Ok(Self::parse_from_lines_with_filter(&lines, filter))
     }
 
+    #[inline]
     pub fn parse_from_lines(lines: &[String]) -> Self {
+        Self::parse_from_lines_with_filter(lines, |word| word.to_lowercase())
+    }
+
+    pub fn parse_from_lines_with_filter(lines: &[String], filter: impl Fn(&str) -> String) -> Self {
         let mut messages = HashSet::new();
 
         for line in lines {
@@ -29,7 +39,7 @@ impl Messages {
 
             let words = line.split_whitespace()
                 .filter(|word| !word.is_empty())
-                .map(|word| word.to_lowercase()) // .to_string()
+                .map(&filter)
                 .collect::<Vec<_>>();
 
             if !words.is_empty() {
