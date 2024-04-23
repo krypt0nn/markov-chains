@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use crate::prelude::Messages;
 
+pub const START_TOKEN: u64 = u64::MIN;
+pub const END_TOKEN: u64 = u64::MAX;
+
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Tokens {
     pub(crate) token_word: HashMap<u64, String>,
@@ -18,7 +21,7 @@ impl Tokens {
                 if !word_token.contains_key(word) {
                     let mut token = rand::random::<u64>();
 
-                    while token_word.contains_key(&token) {
+                    while token_word.contains_key(&token) || token == START_TOKEN || token == END_TOKEN {
                         token = rand::random::<u64>();
                     }
 
@@ -37,7 +40,7 @@ impl Tokens {
     pub fn merge(mut self, tokens: Tokens) -> Self {
         for (word, mut token) in tokens.word_token {
             if !self.word_token.contains_key(&word) {
-                while self.token_word.contains_key(&token) {
+                while self.token_word.contains_key(&token) || token == START_TOKEN || token == END_TOKEN {
                     token = rand::random::<u64>();
                 }
 
