@@ -36,6 +36,7 @@ impl Dataset {
         &self.tokens
     }
 
+    #[inline]
     pub fn build_chains(&self) -> Chains {
         Chains::build_from_dataset(self)
     }

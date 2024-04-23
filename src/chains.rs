@@ -134,8 +134,8 @@ mod tests {
         assert!(chains.get_forward_transitions(world).is_none());
         assert!(chains.get_forward_transitions(text).is_none());
 
-        assert_eq!(chains.get_backward_transitions(world).map(|t| t.collect::<Vec<_>>()), Some(vec![(&world, &1.0)]));
-        assert_eq!(chains.get_backward_transitions(text).map(|t| t.collect::<Vec<_>>()), Some(vec![(&text, &1.0)]));
+        assert_eq!(chains.get_backward_transitions(world).map(|t| t.collect::<Vec<_>>()), Some(vec![(&hello, &1.0)]));
+        assert_eq!(chains.get_backward_transitions(text).map(|t| t.collect::<Vec<_>>()), Some(vec![(&example, &1.0)]));
 
         assert!(chains.get_backward_transitions(hello).is_none());
         assert!(chains.get_backward_transitions(example).is_none());
