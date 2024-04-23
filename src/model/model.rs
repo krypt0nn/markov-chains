@@ -3,19 +3,20 @@ use std::collections::HashMap;
 use crate::prelude::{
     Dataset,
     Tokens,
+    Ngram,
     GenerationParams,
     Transitions,
-    TokenGenerator
+    Generator
 };
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Model {
+pub struct Model<const NGRAM_SIZE: usize> {
     pub(crate) headers: HashMap<String, String>,
-    pub(crate) transitions: Transitions,
+    pub(crate) transitions: Transitions<NGRAM_SIZE>,
     pub(crate) tokens: Tokens
 }
 
-impl Model {
+impl<const NGRAM_SIZE: usize> Model<NGRAM_SIZE> {
     #[inline]
     pub fn build(dataset: Dataset) -> Self {
         let model = Self {
@@ -25,6 +26,7 @@ impl Model {
         };
 
         model.with_header("version", env!("CARGO_PKG_VERSION"))
+             .with_header("ngram_size", NGRAM_SIZE)
     }
 
     #[inline]
@@ -40,7 +42,7 @@ impl Model {
     }
 
     #[inline]
-    pub fn transitions(&self) -> &Transitions {
+    pub fn transitions(&self) -> &Transitions<NGRAM_SIZE> {
         &self.transitions
     }
 
@@ -49,9 +51,23 @@ impl Model {
         &self.tokens
     }
 
+    pub fn get_ngram(&self, words: [impl AsRef<str>; NGRAM_SIZE]) -> anyhow::Result<Ngram<NGRAM_SIZE>> {
+        let mut ngram = [0; NGRAM_SIZE];
+
+        for i in 0..NGRAM_SIZE {
+            let Some(token) = self.tokens.find_token(words[i].as_ref()) else {
+                return Err(anyhow::anyhow!("Couldn't find token for word: {}", words[i].as_ref()));
+            };
+
+            ngram[i] = token;
+        }
+
+        Ok(Ngram::new(ngram))
+    }
+
     #[inline]
-    pub fn generate<'a>(&'a self, beginning: impl Into<Vec<u64>>, params: &'a GenerationParams) -> TokenGenerator<'a> {
-        TokenGenerator {
+    pub fn generate<'a>(&'a self, beginning: impl Into<Vec<Ngram<NGRAM_SIZE>>>, params: &'a GenerationParams) -> Generator<'a, NGRAM_SIZE> {
+        Generator {
             chain: beginning.into(),
             params,
             model: self

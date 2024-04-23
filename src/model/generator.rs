@@ -1,31 +1,23 @@
 use std::iter::FusedIterator;
 
 use crate::prelude::{
+    Ngram,
     GenerationParams,
     Model
 };
 
-pub struct TokenGenerator<'a> {
-    pub(crate) chain: Vec<u64>,
+pub struct Generator<'a, const NGRAM_SIZE: usize> {
+    pub(crate) chain: Vec<Ngram<NGRAM_SIZE>>,
     pub(crate) params: &'a GenerationParams,
-    pub(crate) model: &'a Model
+    pub(crate) model: &'a Model<NGRAM_SIZE>
 }
 
-impl<'a> Iterator for TokenGenerator<'a> {
-    type Item = anyhow::Result<u64>;
+impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
+    type Item = anyhow::Result<Ngram<NGRAM_SIZE>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Get current token from the chain history
         let current = self.chain.last().copied()?;
-
-        // If the chain's length is greater than the minimum length
-        if self.chain.len() > self.params.min_length {
-            // If the chain's length is greater than the maximum length
-            if self.chain.len() > self.params.max_len {
-                // Stop tokens generation
-                return None;
-            }
-        }
 
         // Get possible continuations for the current token
         let mut forward_transitions = self.model.transitions.get_forward_transitions(current)?
@@ -65,7 +57,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // Sort the continuations by probability
         forward_transitions.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
-        // dbg!(&continuations[continuations.len() - 3..]);
+        // dbg!(&forward_transitions[forward_transitions.len() - 3..]);
 
         // While there are continuations
         while forward_transitions.len() > 1 {
@@ -115,6 +107,21 @@ impl<'a> Iterator for TokenGenerator<'a> {
         // Get the most probable token
         let next = forward_transitions.last().unwrap().0;
 
+        // If the chain's length is greater than the minimum length
+        if self.chain.len() > self.params.min_length {
+            // If the chain's length is greater than the maximum length
+            if self.chain.len() > self.params.max_len {
+                // Stop tokens generation
+                return None;
+            }
+
+            // If the next ngram is an end of the text
+            if next.is_part_end() {
+                // Stop tokens generation
+                return None;
+            }
+        }
+
         // Add the most probable token to the chain
         self.chain.push(next);
 
@@ -123,4 +130,4 @@ impl<'a> Iterator for TokenGenerator<'a> {
     }
 }
 
-impl<'a> FusedIterator for TokenGenerator<'a> {}
+impl<'a, const NGRAM_SIZE: usize> FusedIterator for Generator<'a, NGRAM_SIZE> {}

@@ -5,6 +5,9 @@ use crate::prelude::Messages;
 pub const START_TOKEN: u64 = u64::MIN;
 pub const END_TOKEN: u64 = u64::MAX;
 
+pub const START_TOKEN_NAME: &str = "<START>";
+pub const END_TOKEN_NAME: &str = "<END>";
+
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Tokens {
     pub(crate) token_word: HashMap<u64, String>,
@@ -58,8 +61,14 @@ impl Tokens {
     }
 
     #[inline]
-    pub fn find_word(&self, token: u64) -> Option<&String> {
-        self.token_word.get(&token)
+    pub fn find_word(&self, token: u64) -> Option<&str> {
+        match token {
+            START_TOKEN => Some(START_TOKEN_NAME),
+            END_TOKEN => Some(END_TOKEN_NAME),
+
+            _ => self.token_word.get(&token)
+                .map(|word| word.as_str())
+        }
     }
 
     #[inline]
@@ -104,10 +113,10 @@ mod tests {
         let example = tokens.find_token("example").unwrap();
         let text = tokens.find_token("text").unwrap();
 
-        assert_eq!(tokens.find_word(hello), Some(&String::from("hello,")));
-        assert_eq!(tokens.find_word(world), Some(&String::from("world!")));
-        assert_eq!(tokens.find_word(example), Some(&String::from("example")));
-        assert_eq!(tokens.find_word(text), Some(&String::from("text")));
+        assert_eq!(tokens.find_word(hello), Some("hello,"));
+        assert_eq!(tokens.find_word(world), Some("world!"));
+        assert_eq!(tokens.find_word(example), Some("example"));
+        assert_eq!(tokens.find_word(text), Some("text"));
     }
 
     #[test]
@@ -129,9 +138,9 @@ mod tests {
         let example = tokens.find_token("example").unwrap();
         let text = tokens.find_token("text").unwrap();
 
-        assert_eq!(tokens.find_word(hello), Some(&String::from("hello,")));
-        assert_eq!(tokens.find_word(world), Some(&String::from("world!")));
-        assert_eq!(tokens.find_word(example), Some(&String::from("example")));
-        assert_eq!(tokens.find_word(text), Some(&String::from("text")));
+        assert_eq!(tokens.find_word(hello), Some("hello,"));
+        assert_eq!(tokens.find_word(world), Some("world!"));
+        assert_eq!(tokens.find_word(example), Some("example"));
+        assert_eq!(tokens.find_word(text), Some("text"));
     }
 }

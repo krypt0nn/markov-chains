@@ -7,10 +7,13 @@ use crate::prelude::{
     Messages,
     Tokens,
     TokenizedMessages,
+    Ngram,
     Dataset,
     GenerationParams,
     Model
 };
+
+const DEFAULT_NGRAM_SIZE: usize = 2;
 
 #[derive(Subcommand)]
 pub enum CliModelCommand {
@@ -69,7 +72,7 @@ impl CliModelCommand {
 
                 println!("Building model...");
 
-                let model = Model::build(messages);
+                let model = Model::<DEFAULT_NGRAM_SIZE>::build(messages);
 
                 println!("Storing model...");
 
@@ -107,7 +110,7 @@ impl CliModelCommand {
 
                 println!("Building model...");
 
-                let model = Model::build(dataset);
+                let model = Model::<DEFAULT_NGRAM_SIZE>::build(dataset);
 
                 println!("Storing model...");
 
@@ -119,7 +122,7 @@ impl CliModelCommand {
             Self::Load { model, params } => {
                 println!("Reading model...");
 
-                let model = postcard::from_bytes::<Model>(&std::fs::read(model)?)?;
+                let model = postcard::from_bytes::<Model<DEFAULT_NGRAM_SIZE>>(&std::fs::read(model)?)?;
 
                 println!("Starting model...");
 
@@ -129,10 +132,30 @@ impl CliModelCommand {
                 println!();
                 println!("  Model loaded:");
                 println!();
-                println!("        Tokens: {}", model.tokens.len());
-                println!("   Forward len: {}", model.transitions.forward_len());
-                println!("  Backward len: {}", model.transitions.backward_len());
-                println!("    Complexity: {}", model.transitions.calc_complexity());
+                println!("    Tokens       :  {}", model.tokens.len());
+                println!("    Forward len  :  {}", model.transitions.forward_len());
+                println!("    Backward len :  {}", model.transitions.backward_len());
+                println!("    Complexity   :  {}", model.transitions.calc_complexity());
+                println!("    Variety      :  {:.5}%", model.transitions.calc_variety() * 100.0);
+                
+                if !model.headers().is_empty() {
+                    println!();
+                    println!("  Headers:");
+                    println!();
+
+                    let max_len = model.headers()
+                        .keys()
+                        .map(|key| key.len())
+                        .max()
+                        .unwrap_or(0);
+
+                    for (key, value) in model.headers() {
+                        let offset = " ".repeat(max_len - key.len());
+
+                        println!("    [{key}]{offset} : {value}");
+                    }
+                }
+
                 println!();
 
                 loop {
@@ -166,9 +189,13 @@ impl CliModelCommand {
                         stdout.flush()?;
                     }
 
-                    for token in model.generate(request.clone(), params) {
-                        match token {
-                            Ok(token) => {
+                    let request = Ngram::construct_tailless(&request);
+
+                    for ngram in model.generate(request, params) {
+                        match ngram {
+                            Ok(ngram) => {
+                                let token = ngram.token();
+
                                 let Some(word) = model.tokens.find_word(token) else {
                                     print!("\n\n  Failed to find word for token: {token}");
 
@@ -194,53 +221,55 @@ impl CliModelCommand {
             }
 
             Self::CheckWord { path, word } => {
-                println!("Reading model...");
+                todo!()
 
-                let model = postcard::from_bytes::<Model>(&std::fs::read(path)?)?;
+                // println!("Reading model...");
 
-                let Some(token) = model.tokens().find_token(word) else {
-                    anyhow::bail!("Could not find token for word: {word}");
-                };
+                // let model = postcard::from_bytes::<Model<DEFAULT_NGRAM_SIZE>>(&std::fs::read(path)?)?;
 
-                println!("Getting forward transitions...");
+                // let Some(token) = model.tokens().find_token(word) else {
+                //     anyhow::bail!("Could not find token for word: {word}");
+                // };
 
-                let Some(forward_transitions) = model.transitions().get_forward_transitions(token) else {
-                    anyhow::bail!("Could not find forward transitions for token: {token}");
-                };
+                // println!("Getting forward transitions...");
 
-                println!("Getting backward transitions...");
+                // let Some(forward_transitions) = model.transitions().get_forward_transitions(token) else {
+                //     anyhow::bail!("Could not find forward transitions for token: {token}");
+                // };
 
-                let Some(backward_transitions) = model.transitions().get_backward_transitions(token) else {
-                    anyhow::bail!("Could not find backward transitions for token: {token}");
-                };
+                // println!("Getting backward transitions...");
 
-                let mut forward_transitions = forward_transitions.collect::<Vec<_>>();
-                let mut backward_transitions = backward_transitions.collect::<Vec<_>>();
+                // let Some(backward_transitions) = model.transitions().get_backward_transitions(token) else {
+                //     anyhow::bail!("Could not find backward transitions for token: {token}");
+                // };
 
-                forward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
-                backward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+                // let mut forward_transitions = forward_transitions.collect::<Vec<_>>();
+                // let mut backward_transitions = backward_transitions.collect::<Vec<_>>();
 
-                println!();
-                println!("Top 10 forward transitions (current -> next):");
+                // forward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+                // backward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
 
-                for (next_token, prob) in forward_transitions.into_iter().take(10) {
-                    let word = model.tokens()
-                        .find_word(*next_token)
-                        .unwrap();
+                // println!();
+                // println!("Top 10 forward transitions (current -> next):");
 
-                    println!("  [{word}]: {:.5}%", prob * 100.0);
-                }
+                // for (next_token, prob) in forward_transitions.into_iter().take(10) {
+                //     let word = model.tokens()
+                //         .find_word(*next_token)
+                //         .unwrap();
 
-                println!();
-                println!("Top 10 backward transitions (previous -> current):");
+                //     println!("  [{word}]: {:.5}%", prob * 100.0);
+                // }
 
-                for (previous_token, prob) in backward_transitions.into_iter().take(10) {
-                    let word = model.tokens()
-                        .find_word(*previous_token)
-                        .unwrap();
+                // println!();
+                // println!("Top 10 backward transitions (previous -> current):");
 
-                    println!("  [{word}]: {:.5}%", prob * 100.0);
-                }
+                // for (previous_token, prob) in backward_transitions.into_iter().take(10) {
+                //     let word = model.tokens()
+                //         .find_word(*previous_token)
+                //         .unwrap();
+
+                //     println!("  [{word}]: {:.5}%", prob * 100.0);
+                // }
             }
         }
 

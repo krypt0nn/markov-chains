@@ -37,7 +37,7 @@ impl Dataset {
     }
 
     #[inline]
-    pub fn build_transitions(&self) -> Transitions {
+    pub fn build_transitions<const NGRAM_SIZE: usize>(&self) -> Transitions<NGRAM_SIZE> {
         Transitions::build_from_dataset(self)
     }
 }
