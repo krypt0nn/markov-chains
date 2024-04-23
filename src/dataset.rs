@@ -1,7 +1,7 @@
 use crate::prelude::{
     TokenizedMessages,
     Tokens,
-    Chains
+    Transitions
 };
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -37,7 +37,7 @@ impl Dataset {
     }
 
     #[inline]
-    pub fn build_chains(&self) -> Chains {
-        Chains::build_from_dataset(self)
+    pub fn build_transitions(&self) -> Transitions {
+        Transitions::build_from_dataset(self)
     }
 }

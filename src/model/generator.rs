@@ -28,7 +28,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
         }
 
         // Get possible continuations for the current token
-        let mut forward_transitions = self.model.chains.get_forward_transitions(current)?
+        let mut forward_transitions = self.model.transitions.get_forward_transitions(current)?
             .map(|(k, v)| (*k, *v))
             .collect::<Vec<_>>();
 

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::prelude::Dataset;
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Chains {
+pub struct Transitions {
     /// probability = forward_transitions\[current_token\]\[next_token\]
     pub(crate) forward_transitions: HashMap<u64, HashMap<u64, f64>>,
 
@@ -11,7 +11,7 @@ pub struct Chains {
     pub(crate) backward_transitions: HashMap<u64, HashMap<u64, f64>>,
 }
 
-impl Chains {
+impl Transitions {
     pub fn build_from_dataset(dataset: &Dataset) -> Self {
         let mut forward_transitions_counter: HashMap<u64, HashMap<u64, u64>> = HashMap::new();
         let mut backward_transitions_counter: HashMap<u64, HashMap<u64, u64>> = HashMap::new();
@@ -87,20 +87,48 @@ impl Chains {
             .map(|transitions| transitions.iter())
     }
 
-    pub fn calculate_complexity(&self) -> u64 {
-        let mut complexity = 0;
-
-        for continuations in self.forward_transitions.values() {
-            complexity += continuations.len() as u64;
-        }
-
-        complexity
+    #[inline]
+    /// Calculate complexity of the chain
+    /// 
+    /// Complexity is the sum of the number of possible transitions for each token.
+    pub fn calc_complexity(&self) -> u64 {
+        self.forward_transitions.values()
+            .map(|transitions| transitions.len() as u64)
+            .sum()
     }
+
+    #[inline]
+    /// Get probability of the (current_token -> next_token)
+    pub fn get_forward_probability(&self, current_token: u64, next_token: u64) -> Option<f64> {
+        self.forward_transitions.get(&current_token)
+            .and_then(|transitions| transitions.get(&next_token))
+            .copied()
+    }
+
+    #[inline]
+    /// Get probability of the (previous_token <- current_token)
+    pub fn get_backward_probability(&self, previous_token: u64, current_token: u64) -> Option<f64> {
+        self.backward_transitions.get(&current_token)
+            .and_then(|transitions| transitions.get(&previous_token))
+            .copied()
+    }
+
+    // pub fn calc_bayes_probability(&self, current_token: u64, next_token: u64) -> f64 {
+        
+    // }
+
+    // pub fn calc_absolute_discounting_smoothing(&self) -> f64 {
+        
+    // }
+
+    // pub fn calc_knesser_nay_smoothing(&self) -> f64 {
+
+    // }
 }
 
 mod tests {
     #[test]
-    fn build_chains() -> anyhow::Result<()> {
+    fn build() -> anyhow::Result<()> {
         use crate::prelude::*;
 
         let messages = Messages::parse_from_lines(&[
@@ -118,27 +146,27 @@ mod tests {
 
         // hello -> world
         // example -> text
-        let chains = dataset.build_chains();
+        let transitions = dataset.build_transitions();
 
         let hello = dataset.tokens.find_token("hello,").unwrap();
         let world = dataset.tokens.find_token("world!").unwrap();
         let example = dataset.tokens.find_token("example").unwrap();
         let text = dataset.tokens.find_token("text").unwrap();
 
-        assert_eq!(chains.forward_len(), 2);
-        assert_eq!(chains.backward_len(), 2);
+        assert_eq!(transitions.forward_len(), 2);
+        assert_eq!(transitions.backward_len(), 2);
 
-        assert_eq!(chains.get_forward_transitions(hello).map(|t| t.collect::<Vec<_>>()), Some(vec![(&world, &1.0)]));
-        assert_eq!(chains.get_forward_transitions(example).map(|t| t.collect::<Vec<_>>()), Some(vec![(&text, &1.0)]));
+        assert_eq!(transitions.get_forward_transitions(hello).map(|t| t.collect::<Vec<_>>()), Some(vec![(&world, &1.0)]));
+        assert_eq!(transitions.get_forward_transitions(example).map(|t| t.collect::<Vec<_>>()), Some(vec![(&text, &1.0)]));
 
-        assert!(chains.get_forward_transitions(world).is_none());
-        assert!(chains.get_forward_transitions(text).is_none());
+        assert!(transitions.get_forward_transitions(world).is_none());
+        assert!(transitions.get_forward_transitions(text).is_none());
 
-        assert_eq!(chains.get_backward_transitions(world).map(|t| t.collect::<Vec<_>>()), Some(vec![(&hello, &1.0)]));
-        assert_eq!(chains.get_backward_transitions(text).map(|t| t.collect::<Vec<_>>()), Some(vec![(&example, &1.0)]));
+        assert_eq!(transitions.get_backward_transitions(world).map(|t| t.collect::<Vec<_>>()), Some(vec![(&hello, &1.0)]));
+        assert_eq!(transitions.get_backward_transitions(text).map(|t| t.collect::<Vec<_>>()), Some(vec![(&example, &1.0)]));
 
-        assert!(chains.get_backward_transitions(hello).is_none());
-        assert!(chains.get_backward_transitions(example).is_none());
+        assert!(transitions.get_backward_transitions(hello).is_none());
+        assert!(transitions.get_backward_transitions(example).is_none());
 
         Ok(())
     }

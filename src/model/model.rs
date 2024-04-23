@@ -2,16 +2,16 @@ use std::collections::HashMap;
 
 use crate::prelude::{
     Dataset,
-    Chains,
     Tokens,
     GenerationParams,
+    Transitions,
     TokenGenerator
 };
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Model {
     pub(crate) headers: HashMap<String, String>,
-    pub(crate) chains: Chains,
+    pub(crate) transitions: Transitions,
     pub(crate) tokens: Tokens
 }
 
@@ -20,7 +20,7 @@ impl Model {
     pub fn build(dataset: Dataset) -> Self {
         let model = Self {
             headers: HashMap::new(),
-            chains: dataset.build_chains(),
+            transitions: dataset.build_transitions(),
             tokens: dataset.tokens
         };
 
@@ -40,8 +40,8 @@ impl Model {
     }
 
     #[inline]
-    pub fn chains(&self) -> &Chains {
-        &self.chains
+    pub fn transitions(&self) -> &Transitions {
+        &self.transitions
     }
 
     #[inline]

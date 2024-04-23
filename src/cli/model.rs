@@ -130,9 +130,9 @@ impl CliModelCommand {
                 println!("  Model loaded:");
                 println!();
                 println!("        Tokens: {}", model.tokens.len());
-                println!("   Forward len: {}", model.chains.forward_len());
-                println!("  Backward len: {}", model.chains.backward_len());
-                println!("    Complexity: {}", model.chains.calculate_complexity());
+                println!("   Forward len: {}", model.transitions.forward_len());
+                println!("  Backward len: {}", model.transitions.backward_len());
+                println!("    Complexity: {}", model.transitions.calc_complexity());
                 println!();
 
                 loop {
@@ -204,21 +204,21 @@ impl CliModelCommand {
 
                 println!("Getting forward transitions...");
 
-                let Some(forward_transitions) = model.chains().get_forward_transitions(token) else {
+                let Some(forward_transitions) = model.transitions().get_forward_transitions(token) else {
                     anyhow::bail!("Could not find forward transitions for token: {token}");
                 };
 
                 println!("Getting backward transitions...");
 
-                let Some(backward_transitions) = model.chains().get_backward_transitions(token) else {
+                let Some(backward_transitions) = model.transitions().get_backward_transitions(token) else {
                     anyhow::bail!("Could not find backward transitions for token: {token}");
                 };
 
                 let mut forward_transitions = forward_transitions.collect::<Vec<_>>();
                 let mut backward_transitions = backward_transitions.collect::<Vec<_>>();
 
-                forward_transitions.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-                backward_transitions.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                forward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+                backward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
 
                 println!();
                 println!("Top 10 forward transitions (current -> next):");
