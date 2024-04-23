@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::prelude::{
     Dataset,
     Chains,
@@ -8,6 +10,7 @@ use crate::prelude::{
 
 #[derive(Default, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Model {
+    pub(crate) headers: HashMap<String, String>,
     pub(crate) chains: Chains,
     pub(crate) tokens: Tokens
 }
@@ -15,10 +18,25 @@ pub struct Model {
 impl Model {
     #[inline]
     pub fn build(dataset: Dataset) -> Self {
-        Self {
+        let model = Self {
+            headers: HashMap::new(),
             chains: dataset.build_chains(),
             tokens: dataset.tokens
-        }
+        };
+
+        model.with_header("version", env!("CARGO_PKG_VERSION"))
+    }
+
+    #[inline]
+    pub fn with_header(mut self, tag: impl ToString, value: impl ToString) -> Self {
+        self.headers.insert(tag.to_string(), value.to_string());
+
+        self
+    }
+
+    #[inline]
+    pub fn headers(&self) -> &HashMap<String, String> {
+        &self.headers
     }
 
     #[inline]

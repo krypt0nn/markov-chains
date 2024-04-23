@@ -128,8 +128,10 @@ impl CliModelCommand {
 
                 println!();
                 println!("  Model loaded:");
+                println!();
                 println!("        Tokens: {}", model.tokens.len());
-                println!("        Chains: {}", model.chains.len());
+                println!("   Forward len: {}", model.chains.forward_len());
+                println!("  Backward len: {}", model.chains.backward_len());
                 println!("    Complexity: {}", model.chains.calculate_complexity());
                 println!();
 
@@ -196,43 +198,46 @@ impl CliModelCommand {
 
                 let model = postcard::from_bytes::<Model>(&std::fs::read(path)?)?;
 
-                println!("Getting continuations...");
-
                 let Some(token) = model.tokens().find_token(word) else {
                     anyhow::bail!("Could not find token for word: {word}");
                 };
 
-                let Some(mut continuations) = model.chains().get_continuations(token).cloned() else {
-                    anyhow::bail!("Could not find continuations for token: {token}");
+                println!("Getting forward transitions...");
+
+                let Some(forward_transitions) = model.chains().get_forward_transitions(token) else {
+                    anyhow::bail!("Could not find forward transitions for token: {token}");
                 };
 
-                println!("Getting predecessors...");
+                println!("Getting backward transitions...");
 
-                let mut predecessors = Vec::new();
+                let Some(backward_transitions) = model.chains().get_backward_transitions(token) else {
+                    anyhow::bail!("Could not find backward transitions for token: {token}");
+                };
 
-                for (from_token, variants) in &model.chains().chains {
-                    if let Some((_, prob)) = variants.iter().find(|(t, _)| *t == token) {
-                        predecessors.push((*from_token, *prob));
-                    }
-                }
+                let mut forward_transitions = forward_transitions.collect::<Vec<_>>();
+                let mut backward_transitions = backward_transitions.collect::<Vec<_>>();
 
-                continuations.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-                predecessors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                forward_transitions.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                backward_transitions.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
                 println!();
-                println!("Top 10 predecessors:");
+                println!("Top 10 forward transitions (current -> next):");
 
-                for (from_token, prob) in predecessors.into_iter().take(10) {
-                    let word = model.tokens().find_word(from_token).unwrap();
+                for (next_token, prob) in forward_transitions.into_iter().take(10) {
+                    let word = model.tokens()
+                        .find_word(*next_token)
+                        .unwrap();
 
                     println!("  [{word}]: {:.5}%", prob * 100.0);
                 }
 
                 println!();
-                println!("Top 10 ancestors:");
+                println!("Top 10 backward transitions (previous -> current):");
 
-                for (to_token, prob) in continuations.into_iter().take(10) {
-                    let word = model.tokens().find_word(to_token).unwrap();
+                for (previous_token, prob) in backward_transitions.into_iter().take(10) {
+                    let word = model.tokens()
+                        .find_word(*previous_token)
+                        .unwrap();
 
                     println!("  [{word}]: {:.5}%", prob * 100.0);
                 }
