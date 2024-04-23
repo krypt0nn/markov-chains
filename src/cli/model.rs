@@ -13,7 +13,7 @@ use crate::prelude::{
     Model
 };
 
-const DEFAULT_NGRAM_SIZE: usize = 1;
+const DEFAULT_NGRAM_SIZE: usize = 2;
 
 #[derive(Subcommand)]
 pub enum CliModelCommand {

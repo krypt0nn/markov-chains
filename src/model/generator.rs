@@ -146,12 +146,12 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
                 // Stop tokens generation
                 return None;
             }
+        }
 
-            // If the next ngram is an end of the text
-            if next.is_part_end() {
-                // Stop tokens generation
-                return None;
-            }
+        // If the next ngram is an end of the text
+        if next.is_end() {
+            // Stop tokens generation
+            return None;
         }
 
         // Add the most probable token to the chain

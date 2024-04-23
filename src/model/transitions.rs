@@ -112,9 +112,9 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
     /// Complexity is the sum of the number of possible transitions for each ngram.
     pub fn calc_complexity(&self) -> u64 {
         self.forward_transitions.iter()
-            .filter(|(k, _)| !k.is_part_start() && !k.is_part_end())
+            .filter(|(k, _)| !k.is_start() && !k.is_end())
             .map(|(_, transitions)| transitions.iter())
-            .map(|transitions| transitions.filter(|(k, _)| !k.is_part_start() && !k.is_part_end()))
+            .map(|transitions| transitions.filter(|(k, _)| !k.is_start() && !k.is_end()))
             .map(|transitions| transitions.count() as u64)
             .sum()
     }
@@ -131,9 +131,9 @@ impl<const NGRAM_SIZE: usize> Transitions<NGRAM_SIZE> {
         let avg_paths = self.calc_avg_paths();
 
         let more_than_avg_paths = self.forward_transitions.iter()
-            .filter(|(k, _)| !k.is_part_start() && !k.is_part_end())
+            .filter(|(k, _)| !k.is_start() && !k.is_end())
             .map(|(_, transitions)| transitions.keys())
-            .map(|ngrams| ngrams.filter(|ngram| !ngram.is_part_start() && !ngram.is_part_end()))
+            .map(|ngrams| ngrams.filter(|ngram| !ngram.is_start() && !ngram.is_end()))
             .map(|ngrams| ngrams.count() as f64)
             .filter(|count| *count > avg_paths)
             .count();
@@ -260,24 +260,14 @@ mod tests {
         assert_eq!(transitions.get_forward_transitions(hello).map(|t| t.collect::<Vec<_>>()), Some(vec![(&world, &1)]));
         assert_eq!(transitions.get_forward_transitions(example).map(|t| t.collect::<Vec<_>>()), Some(vec![(&text, &1)]));
 
-        assert_eq!(transitions.get_forward_transitions(world).map(|t| t.collect::<Vec<_>>()), Some(vec![(&Unigram::end(), &1)]));
-        assert_eq!(transitions.get_forward_transitions(text).map(|t| t.collect::<Vec<_>>()), Some(vec![(&Unigram::end(), &1)]));
-
         assert_eq!(transitions.get_backward_transitions(world).map(|t| t.collect::<Vec<_>>()), Some(vec![(&hello, &1)]));
         assert_eq!(transitions.get_backward_transitions(text).map(|t| t.collect::<Vec<_>>()), Some(vec![(&example, &1)]));
 
-        assert_eq!(transitions.get_backward_transitions(hello).map(|t| t.collect::<Vec<_>>()), Some(vec![(&Unigram::start(), &1)]));
-        assert_eq!(transitions.get_backward_transitions(example).map(|t| t.collect::<Vec<_>>()), Some(vec![(&Unigram::start(), &1)]));
-
         assert_eq!(transitions.get_forward_probability(hello, world), Some(1.0));
         assert_eq!(transitions.get_forward_probability(example, text), Some(1.0));
-        assert_eq!(transitions.get_forward_probability(world, Unigram::end()), Some(1.0));
-        assert_eq!(transitions.get_forward_probability(text, Unigram::end()), Some(1.0));
 
         assert_eq!(transitions.get_backward_probability(hello, world), Some(1.0));
         assert_eq!(transitions.get_backward_probability(example, text), Some(1.0));
-        assert_eq!(transitions.get_backward_probability(Unigram::start(), hello), Some(1.0));
-        assert_eq!(transitions.get_backward_probability(Unigram::start(), example), Some(1.0));
 
         Ok(())
     }

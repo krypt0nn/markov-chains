@@ -20,33 +20,22 @@ impl<const SIZE: usize> Ngram<SIZE> {
     }
 
     #[inline]
-    pub fn end() -> Self {
-        Self::new([END_TOKEN; SIZE])
-    }
-
-    #[inline]
     pub fn is_start(&self) -> bool {
         self.0 == [START_TOKEN; SIZE]
     }
 
     #[inline]
     pub fn is_end(&self) -> bool {
-        self.0 == [END_TOKEN; SIZE]
-    }
-
-    #[inline]
-    pub fn is_part_start(&self) -> bool {
-        self.0.contains(&START_TOKEN)
-    }
-
-    #[inline]
-    pub fn is_part_end(&self) -> bool {
         self.0.contains(&END_TOKEN)
     }
 
     #[inline]
     pub fn token(&self) -> u64 {
-        self.0[SIZE - 1]
+        if self.is_end() && SIZE > 1 {
+            self.0[SIZE - 2]
+        } else {
+            self.0[SIZE - 1]
+        }
     }
 
     #[inline]
@@ -58,9 +47,7 @@ impl<const SIZE: usize> Ngram<SIZE> {
     pub fn head_ngram(&self) -> Self {
         let mut ngram = [END_TOKEN; SIZE];
 
-        for i in 0..SIZE - 1 {
-            ngram[i] = self.0[i];
-        }
+        ngram[..SIZE - 1].copy_from_slice(&self.0[..SIZE - 1]);
 
         Self::new(ngram)
     }
@@ -74,9 +61,7 @@ impl<const SIZE: usize> Ngram<SIZE> {
     pub fn tail_ngram(&self) -> Self {
         let mut ngram = [START_TOKEN; SIZE];
 
-        for i in 1..SIZE {
-            ngram[i] = self.0[i];
-        }
+        ngram[1..SIZE].copy_from_slice(&self.0[1..SIZE]);
 
         Self::new(ngram)
     }
@@ -88,7 +73,7 @@ impl<const SIZE: usize> Ngram<SIZE> {
 
         extended_tokens.extend([START_TOKEN; SIZE]);
         extended_tokens.extend(tokens);
-        extended_tokens.extend([END_TOKEN; SIZE]);
+        extended_tokens.push(END_TOKEN);
 
         let n = extended_tokens.len();
 
@@ -105,21 +90,9 @@ impl<const SIZE: usize> Ngram<SIZE> {
 
     /// Construct list of ngrams from list of tokens without the ending tail
     pub fn construct_tailless(tokens: &[u64]) -> Vec<Self> {
-        let mut extended_tokens = Vec::with_capacity(tokens.len() + SIZE + 1);
-        let mut ngrams = Vec::with_capacity(extended_tokens.len());
+        let mut ngrams = Self::construct(tokens);
 
-        extended_tokens.extend([START_TOKEN; SIZE]);
-        extended_tokens.extend(tokens);
-
-        let n = extended_tokens.len();
-
-        for i in 0..n - SIZE + 1 {
-            let mut ngram = [0; SIZE];
-
-            ngram.copy_from_slice(&extended_tokens[i..i + SIZE]);
-
-            ngrams.push(Self::new(ngram));
-        }
+        ngrams.pop();
 
         ngrams
     }
@@ -128,7 +101,7 @@ impl<const SIZE: usize> Ngram<SIZE> {
     pub fn deconstruct(ngrams: &[Self]) -> Vec<u64> {
         let mut tokens = Vec::with_capacity(ngrams.len());
 
-        for ngram in ngrams.iter().take(ngrams.len() - SIZE) {
+        for ngram in ngrams.iter().take(ngrams.len().saturating_sub(1)) {
             if ngram.is_start() {
                 continue;
             }
@@ -181,24 +154,24 @@ pub type Trigram = Ngram<3>;
 mod tests {
     #[test]
     fn unigram() {
-        use super::Unigram;
+        use super::{Unigram, END_TOKEN};
 
         assert_eq!(&Unigram::construct(&[]), &[
             Unigram::start(),
-            Unigram::end()
+            Unigram::new([END_TOKEN])
         ]);
 
         assert_eq!(&Unigram::construct(&[1]), &[
             Unigram::start(),
             Unigram::new([1]),
-            Unigram::end()
+            Unigram::new([END_TOKEN])
         ]);
 
         assert_eq!(&Unigram::construct(&[1, 2]), &[
             Unigram::start(),
             Unigram::new([1]),
             Unigram::new([2]),
-            Unigram::end()
+            Unigram::new([END_TOKEN])
         ]);
 
         assert_eq!(&Unigram::construct(&[1, 2, 3]), &[
@@ -206,7 +179,7 @@ mod tests {
             Unigram::new([1]),
             Unigram::new([2]),
             Unigram::new([3]),
-            Unigram::end()
+            Unigram::new([END_TOKEN])
         ]);
     }
 
@@ -216,23 +189,20 @@ mod tests {
 
         assert_eq!(&Bigram::construct(&[]), &[
             Bigram::start(),
-            Bigram::new([START_TOKEN, END_TOKEN]),
-            Bigram::end()
+            Bigram::new([START_TOKEN, END_TOKEN])
         ]);
 
         assert_eq!(&Bigram::construct(&[1]), &[
             Bigram::start(),
             Bigram::new([START_TOKEN, 1]),
-            Bigram::new([1, END_TOKEN]),
-            Bigram::end()
+            Bigram::new([1, END_TOKEN])
         ]);
 
         assert_eq!(&Bigram::construct(&[1, 2]), &[
             Bigram::start(),
             Bigram::new([START_TOKEN, 1]),
             Bigram::new([1, 2]),
-            Bigram::new([2, END_TOKEN]),
-            Bigram::end()
+            Bigram::new([2, END_TOKEN])
         ]);
 
         assert_eq!(&Bigram::construct(&[1, 2, 3]), &[
@@ -240,8 +210,7 @@ mod tests {
             Bigram::new([START_TOKEN, 1]),
             Bigram::new([1, 2]),
             Bigram::new([2, 3]),
-            Bigram::new([3, END_TOKEN]),
-            Bigram::end()
+            Bigram::new([3, END_TOKEN])
         ]);
     }
 
@@ -251,26 +220,20 @@ mod tests {
 
         assert_eq!(&Trigram::construct(&[]), &[
             Trigram::start(),
-            Trigram::new([START_TOKEN, START_TOKEN, END_TOKEN]),
-            Trigram::new([START_TOKEN, END_TOKEN, END_TOKEN]),
-            Trigram::end()
+            Trigram::new([START_TOKEN, START_TOKEN, END_TOKEN])
         ]);
 
         assert_eq!(&Trigram::construct(&[1]), &[
             Trigram::start(),
             Trigram::new([START_TOKEN, START_TOKEN, 1]),
-            Trigram::new([START_TOKEN, 1, END_TOKEN]),
-            Trigram::new([1, END_TOKEN, END_TOKEN]),
-            Trigram::end()
+            Trigram::new([START_TOKEN, 1, END_TOKEN])
         ]);
 
         assert_eq!(&Trigram::construct(&[1, 2]), &[
             Trigram::start(),
             Trigram::new([START_TOKEN, START_TOKEN, 1]),
             Trigram::new([START_TOKEN, 1, 2]),
-            Trigram::new([1, 2, END_TOKEN]),
-            Trigram::new([2, END_TOKEN, END_TOKEN]),
-            Trigram::end()
+            Trigram::new([1, 2, END_TOKEN])
         ]);
 
         assert_eq!(&Trigram::construct(&[1, 2, 3]), &[
@@ -278,9 +241,7 @@ mod tests {
             Trigram::new([START_TOKEN, START_TOKEN, 1]),
             Trigram::new([START_TOKEN, 1, 2]),
             Trigram::new([1, 2, 3]),
-            Trigram::new([2, 3, END_TOKEN]),
-            Trigram::new([3, END_TOKEN, END_TOKEN]),
-            Trigram::end()
+            Trigram::new([2, 3, END_TOKEN])
         ]);
     }
 
