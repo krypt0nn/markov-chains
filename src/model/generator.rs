@@ -19,11 +19,9 @@ impl<'a> Iterator for Generator<'a> {
     type Item = anyhow::Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let unigram = Unigram::construct_tailless(&self.chain);
-        let bigram = Bigram::construct_tailless(&self.chain);
-        let trigram = Trigram::construct_tailless(&self.chain);
-
         let mut continuations = None;
+
+        let trigram = Trigram::construct_tailless(&self.chain);
 
         // Get initial predictions from the trigram
         if let Some(trigram) = trigram.last() {
@@ -40,6 +38,8 @@ impl<'a> Iterator for Generator<'a> {
 
         // If there are no continuations from the trigram - try to get them from the bigram
         if continuations.is_none() {
+            let bigram = Bigram::construct_tailless(&self.chain);
+
             if let Some(bigram) = bigram.last() {
                 if let Some(bigram_continuations) = self.model.transitions.for_bigram(bigram) {
                     let bigram_continuations = bigram_continuations
@@ -55,6 +55,8 @@ impl<'a> Iterator for Generator<'a> {
 
         // If there are no continuations from the bigram - try to get them from the unigram
         if continuations.is_none() {
+            let unigram = Unigram::construct_tailless(&self.chain);
+
             if let Some(unigram) = unigram.last() {
                 if let Some(unigram_continuations) = self.model.transitions.for_unigram(unigram) {
                     let unigram_continuations = unigram_continuations
