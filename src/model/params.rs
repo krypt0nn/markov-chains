@@ -48,7 +48,15 @@ pub struct GenerationParams {
     /// 
     /// Breaks new tokens generation if we have generated
     /// `max_len` tokens.
-    pub max_len: usize
+    pub max_len: usize,
+
+    #[arg(long, default_value_t = false)]
+    /// Do not use bigrams for text generation
+    pub no_bigrams: bool,
+
+    #[arg(long, default_value_t = false)]
+    /// Do not use trigrams for text generation
+    pub no_trigrams: bool
 }
 
 impl Default for GenerationParams {
@@ -60,7 +68,9 @@ impl Default for GenerationParams {
             repeat_penalty: 0.35,
             k_normal: 0.95,
             min_length: 1,
-            max_len: 150
+            max_len: 150,
+            no_bigrams: false,
+            no_trigrams: false
         }
     }
 }

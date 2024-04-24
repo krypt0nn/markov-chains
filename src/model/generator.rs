@@ -21,24 +21,26 @@ impl<'a> Iterator for Generator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let mut continuations = None;
 
-        let trigram = Trigram::construct_tailless(&self.chain);
-
         // Get initial predictions from the trigram
-        if let Some(trigram) = trigram.last() {
-            if let Some(trigram_continuations) = self.model.transitions.for_trigram(trigram) {
-                let trigram_continuations = trigram_continuations
-                    .filter(|(token, _)| !token.is_end())
-                    .map(|(token, number)| (token.token(), *number))
-                    .collect::<Vec<_>>();
+        if !self.params.no_trigrams {
+            let trigram = Trigram::construct_tailless(&self.chain);
 
-                if !trigram_continuations.is_empty() {
-                    continuations = Some(trigram_continuations);
+            if let Some(trigram) = trigram.last() {
+                if let Some(trigram_continuations) = self.model.transitions.for_trigram(trigram) {
+                    let trigram_continuations = trigram_continuations
+                        .filter(|(token, _)| !token.is_end())
+                        .map(|(token, number)| (token.token(), *number))
+                        .collect::<Vec<_>>();
+
+                    if !trigram_continuations.is_empty() {
+                        continuations = Some(trigram_continuations);
+                    }
                 }
             }
         }
 
         // If there are no continuations from the trigram - try to get them from the bigram
-        if continuations.is_none() {
+        if !self.params.no_bigrams && continuations.is_none() {
             let bigram = Bigram::construct_tailless(&self.chain);
 
             if let Some(bigram) = bigram.last() {
