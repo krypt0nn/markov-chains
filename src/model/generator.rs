@@ -27,6 +27,7 @@ impl<'a> Iterator for Generator<'a> {
         if let Some(trigram) = trigram.last() {
             if let Some(trigram_continuations) = self.model.transitions.for_trigram(trigram) {
                 let trigram_continuations = trigram_continuations
+                    .filter(|(token, _)| !token.is_end())
                     .map(|(token, number)| (token.token(), *number))
                     .collect::<Vec<_>>();
 
@@ -43,6 +44,7 @@ impl<'a> Iterator for Generator<'a> {
             if let Some(bigram) = bigram.last() {
                 if let Some(bigram_continuations) = self.model.transitions.for_bigram(bigram) {
                     let bigram_continuations = bigram_continuations
+                        .filter(|(token, _)| !token.is_end())
                         .map(|(token, number)| (token.token(), *number))
                         .collect::<Vec<_>>();
 
@@ -60,6 +62,7 @@ impl<'a> Iterator for Generator<'a> {
             if let Some(unigram) = unigram.last() {
                 if let Some(unigram_continuations) = self.model.transitions.for_unigram(unigram) {
                     let unigram_continuations = unigram_continuations
+                        .filter(|(token, _)| !token.is_end())
                         .map(|(token, number)| (token.token(), *number))
                         .collect::<Vec<_>>();
 
