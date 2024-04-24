@@ -19,15 +19,15 @@ impl<'a> Iterator for Generator<'a> {
     type Item = anyhow::Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let unigram = Unigram::construct(&self.chain);
-        let bigram = Bigram::construct(&self.chain);
-        let trigram = Trigram::construct(&self.chain);
+        let unigram = Unigram::construct_tailless(&self.chain);
+        let bigram = Bigram::construct_tailless(&self.chain);
+        let trigram = Trigram::construct_tailless(&self.chain);
 
         let mut continuations = None;
 
         // Get initial predictions from the trigram
         if let Some(trigram) = trigram.last() {
-            if let Some(trigram_continuations) = self.model.transitions.for_trigram(&trigram) {
+            if let Some(trigram_continuations) = self.model.transitions.for_trigram(trigram) {
                 let trigram_continuations = trigram_continuations
                     .map(|(token, _)| token.token())
                     .collect::<Vec<_>>();
@@ -41,7 +41,7 @@ impl<'a> Iterator for Generator<'a> {
         // If there are no continuations from the trigram - try to get them from the bigram
         if continuations.is_none() {
             if let Some(bigram) = bigram.last() {
-                if let Some(bigram_continuations) = self.model.transitions.for_bigram(&bigram) {
+                if let Some(bigram_continuations) = self.model.transitions.for_bigram(bigram) {
                     let bigram_continuations = bigram_continuations
                         .map(|(token, _)| token.token())
                         .collect::<Vec<_>>();
@@ -56,7 +56,7 @@ impl<'a> Iterator for Generator<'a> {
         // If there are no continuations from the bigram - try to get them from the unigram
         if continuations.is_none() {
             if let Some(unigram) = unigram.last() {
-                if let Some(unigram_continuations) = self.model.transitions.for_unigram(&unigram) {
+                if let Some(unigram_continuations) = self.model.transitions.for_unigram(unigram) {
                     let unigram_continuations = unigram_continuations
                         .map(|(token, _)| token.token())
                         .collect::<Vec<_>>();
@@ -102,9 +102,9 @@ impl<'a> Iterator for Generator<'a> {
         // }
 
         // Sort the continuations by probability
-        continuations.sort_by(|a, b| a.cmp(&b));
+        continuations.sort();
 
-        // dbg!(&forward_transitions[forward_transitions.len() - 3..]);
+        // dbg!(&continuations);
 
         // While there are continuations
         while continuations.len() > 1 {
