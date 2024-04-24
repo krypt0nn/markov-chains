@@ -121,8 +121,10 @@ impl<'a> Iterator for Generator<'a> {
             // Get the next most probable token
             let next = continuations.last().unwrap().0;
 
-            // Find all the repeats of the next token
+            // Find last repeats of the next token
             let repeats = self.chain.iter()
+                .rev()
+                .take(self.params.repeat_penalty_window)
                 .filter(|token| **token == next)
                 .count();
 

@@ -20,7 +20,7 @@ pub struct GenerationParams {
     pub temperature_alpha: f64,
 
     #[arg(long, default_value_t = 0.7)]
-    /// Probability to skip repeated token
+    /// Reverse probability to skip repeated token
     /// 
     /// If `random_seed > repeat_penalty^[repeats number]`,
     /// then the repeated token is skipped.
@@ -29,6 +29,12 @@ pub struct GenerationParams {
     /// 
     /// `random_seed` is a random number from 0.0 to 1.0.
     pub repeat_penalty: f64,
+
+    #[arg(long, default_value_t = 10)]
+    /// Size of window which calculates repeats number
+    /// 
+    /// See `repeat_penalty` for the formula.
+    pub repeat_penalty_window: usize,
 
     #[arg(long, default_value_t = 0.95)]
     /// Percent of tokens to keep from the normal distribution
@@ -66,6 +72,7 @@ impl Default for GenerationParams {
             temperature: 0.85,
             temperature_alpha: 1.0,
             repeat_penalty: 0.7,
+            repeat_penalty_window: 10,
             k_normal: 0.95,
             min_length: 1,
             max_len: 150,
