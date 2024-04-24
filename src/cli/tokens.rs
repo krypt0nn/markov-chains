@@ -7,6 +7,8 @@ use crate::prelude::{
     Tokens
 };
 
+use super::search_files;
+
 #[derive(Subcommand)]
 pub enum CliTokensCommand {
     /// Parse tokens from a messages bundle
@@ -41,7 +43,7 @@ impl CliTokensCommand {
 
                 let mut messages = Messages::default();
 
-                for path in path {
+                for path in search_files(path) {
                     println!("Reading {:?}...", path);
 
                     messages = messages.merge(postcard::from_bytes::<Messages>(&std::fs::read(path)?)?);
@@ -63,7 +65,7 @@ impl CliTokensCommand {
 
                 let mut tokens = Tokens::default();
 
-                for path in path {
+                for path in search_files(path) {
                     println!("Reading {:?}...", path);
 
                     tokens = tokens.merge(postcard::from_bytes::<Tokens>(&std::fs::read(path)?)?);

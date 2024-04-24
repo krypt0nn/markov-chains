@@ -8,6 +8,8 @@ use crate::prelude::{
     TokenizedMessages
 };
 
+use super::search_files;
+
 #[derive(Subcommand)]
 pub enum CliMessagesCommand {
     /// Parse messages from a file to a bundle
@@ -57,7 +59,7 @@ impl CliMessagesCommand {
 
                 println!("Parsing messages...");
 
-                for path in path {
+                for path in search_files(path) {
                     println!("Parsing {:?}...", path);
 
                     messages = messages.merge(Messages::parse_from_messages(path)?);
@@ -75,7 +77,7 @@ impl CliMessagesCommand {
 
                 println!("Reading messages bundles...");
 
-                for path in path {
+                for path in search_files(path) {
                     println!("Reading {:?}...", path);
 
                     let bundle = postcard::from_bytes::<Messages>(&std::fs::read(path)?)?;

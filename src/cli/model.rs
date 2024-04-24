@@ -12,6 +12,8 @@ use crate::prelude::{
     Model
 };
 
+use super::search_files;
+
 #[derive(Subcommand)]
 pub enum CliModelCommand {
     /// Build language model
@@ -106,7 +108,7 @@ impl CliModelCommand {
 
                 let mut messages = Messages::default();
 
-                for path in paths {
+                for path in search_files(paths) {
                     println!("Parsing {:?}...", path);
 
                     let parsed = Messages::parse_from_messages(path)?;

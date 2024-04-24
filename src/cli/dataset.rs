@@ -8,6 +8,8 @@ use crate::prelude::{
     Dataset
 };
 
+use super::search_files;
+
 #[derive(Subcommand)]
 pub enum CliDatasetCommand {
     /// Create dataset from the tokenized messages and tokens bundle
@@ -108,7 +110,7 @@ impl CliDatasetCommand {
 
                 println!("Reading tokenized messages bundles...");
 
-                for path in messages {
+                for path in search_files(messages) {
                     println!("Reading {:?}...", path);
 
                     let tokenized_messages = postcard::from_bytes::<TokenizedMessages>(&std::fs::read(path)?)?;
@@ -130,7 +132,7 @@ impl CliDatasetCommand {
 
                 println!("Reading tokens bundles...");
 
-                for path in tokens {
+                for path in search_files(tokens) {
                     println!("Reading {:?}...", path);
 
                     let tokens = postcard::from_bytes::<Tokens>(&std::fs::read(path)?)?;
