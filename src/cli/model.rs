@@ -7,13 +7,10 @@ use crate::prelude::{
     Messages,
     Tokens,
     TokenizedMessages,
-    Ngram,
     Dataset,
     GenerationParams,
     Model
 };
-
-const DEFAULT_NGRAM_SIZE: usize = 2;
 
 #[derive(Subcommand)]
 pub enum CliModelCommand {
@@ -47,17 +44,6 @@ pub enum CliModelCommand {
 
         #[command(flatten)]
         params: GenerationParams
-    },
-
-    /// Check the word appearance in the model
-    CheckWord {
-        #[arg(short, long)]
-        /// Path to the model
-        path: PathBuf,
-
-        #[arg(short, long)]
-        /// Word to check
-        word: String
     }
 }
 
@@ -72,7 +58,7 @@ impl CliModelCommand {
 
                 println!("Building model...");
 
-                let model = Model::<DEFAULT_NGRAM_SIZE>::build(messages);
+                let model = Model::build(messages);
 
                 println!("Storing model...");
 
@@ -110,7 +96,7 @@ impl CliModelCommand {
 
                 println!("Building model...");
 
-                let model = Model::<DEFAULT_NGRAM_SIZE>::build(dataset);
+                let model = Model::build(dataset);
 
                 println!("Storing model...");
 
@@ -122,7 +108,7 @@ impl CliModelCommand {
             Self::Load { model, params } => {
                 println!("Reading model...");
 
-                let model = postcard::from_bytes::<Model<DEFAULT_NGRAM_SIZE>>(&std::fs::read(model)?)?;
+                let model = postcard::from_bytes::<Model>(&std::fs::read(model)?)?;
 
                 println!("Starting model...");
 
@@ -133,11 +119,9 @@ impl CliModelCommand {
                 println!("  Model loaded:");
                 println!();
                 println!("    Total tokens  :  {}", model.tokens.len());
-                println!("    Forward len   :  {}", model.transitions.forward_len());
-                println!("    Backward len  :  {}", model.transitions.backward_len());
-                println!("    Complexity    :  {}", model.transitions.calc_complexity());
-                println!("    Average paths :  {:.5}", model.transitions.calc_avg_paths());
-                println!("    Variety       :  {:.5}%", model.transitions.calc_variety() * 100.0);
+                println!("    Chains        :  {} / {} / {}", model.transitions.trigrams_len(), model.transitions.bigrams_len(), model.transitions.unigrams_len());
+                println!("    Avg paths     :  {:.4} / {:.4} / {:.4}", model.transitions.calc_avg_trigram_paths(), model.transitions.calc_avg_bigram_paths(), model.transitions.calc_avg_unigram_paths());
+                println!("    Variety       :  {:.4}% / {:.4}% / {:.4}%", model.transitions.calc_trigram_variety() * 100.0, model.transitions.calc_bigram_variety() * 100.0, model.transitions.calc_unigram_variety() * 100.0);
 
                 if !model.headers().is_empty() {
                     println!();
@@ -190,13 +174,9 @@ impl CliModelCommand {
                         stdout.flush()?;
                     }
 
-                    let request = Ngram::construct_tailless(&request);
-
-                    for ngram in model.generate(request, params) {
-                        match ngram {
-                            Ok(ngram) => {
-                                let token = ngram.token();
-
+                    for token in model.generate(request, params) {
+                        match token {
+                            Ok(token) => {
                                 let Some(word) = model.tokens.find_word(token) else {
                                     print!("\n\n  Failed to find word for token: {token}");
 
@@ -219,58 +199,6 @@ impl CliModelCommand {
                     stdout.write_all(b"\n\n")?;
                     stdout.flush()?;
                 }
-            }
-
-            Self::CheckWord { path, word } => {
-                todo!()
-
-                // println!("Reading model...");
-
-                // let model = postcard::from_bytes::<Model<DEFAULT_NGRAM_SIZE>>(&std::fs::read(path)?)?;
-
-                // let Some(token) = model.tokens().find_token(word) else {
-                //     anyhow::bail!("Could not find token for word: {word}");
-                // };
-
-                // println!("Getting forward transitions...");
-
-                // let Some(forward_transitions) = model.transitions().get_forward_transitions(token) else {
-                //     anyhow::bail!("Could not find forward transitions for token: {token}");
-                // };
-
-                // println!("Getting backward transitions...");
-
-                // let Some(backward_transitions) = model.transitions().get_backward_transitions(token) else {
-                //     anyhow::bail!("Could not find backward transitions for token: {token}");
-                // };
-
-                // let mut forward_transitions = forward_transitions.collect::<Vec<_>>();
-                // let mut backward_transitions = backward_transitions.collect::<Vec<_>>();
-
-                // forward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
-                // backward_transitions.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
-
-                // println!();
-                // println!("Top 10 forward transitions (current -> next):");
-
-                // for (next_token, prob) in forward_transitions.into_iter().take(10) {
-                //     let word = model.tokens()
-                //         .find_word(*next_token)
-                //         .unwrap();
-
-                //     println!("  [{word}]: {:.5}%", prob * 100.0);
-                // }
-
-                // println!();
-                // println!("Top 10 backward transitions (previous -> current):");
-
-                // for (previous_token, prob) in backward_transitions.into_iter().take(10) {
-                //     let word = model.tokens()
-                //         .find_word(*previous_token)
-                //         .unwrap();
-
-                //     println!("  [{word}]: {:.5}%", prob * 100.0);
-                // }
             }
         }
 

@@ -1,78 +1,93 @@
 use std::iter::FusedIterator;
 
-use rayon::prelude::*;
-
 use crate::prelude::{
-    Ngram,
+    Unigram,
+    Bigram,
+    Trigram,
     GenerationParams,
-    SmoothingAlgorithm,
-    Model
+    Model,
+    END_TOKEN
 };
 
-pub struct Generator<'a, const NGRAM_SIZE: usize> {
-    pub(crate) chain: Vec<Ngram<NGRAM_SIZE>>,
+pub struct Generator<'a> {
+    pub(crate) chain: Vec<u64>,
     pub(crate) params: &'a GenerationParams,
-    pub(crate) model: &'a Model<NGRAM_SIZE>
+    pub(crate) model: &'a Model
 }
 
-impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
-    type Item = anyhow::Result<Ngram<NGRAM_SIZE>>;
+impl<'a> Iterator for Generator<'a> {
+    type Item = anyhow::Result<u64>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // Get current token from the chain history
-        let current = self.chain.last().copied()?;
+        let unigram = Unigram::construct(&self.chain);
+        let bigram = Bigram::construct(&self.chain);
+        let trigram = Trigram::construct(&self.chain);
 
-        // Get possible continuations for the current token
-        let mut forward_transitions = self.model.transitions.get_forward_transitions(current)?
-            .collect::<Vec<_>>();
+        let mut continuations = None;
+
+        // Get initial predictions from the trigram
+        if let Some(trigram) = trigram.last() {
+            if let Some(trigram_continuations) = self.model.transitions.for_trigram(&trigram) {
+                let trigram_continuations = trigram_continuations
+                    .map(|(token, _)| token.token())
+                    .collect::<Vec<_>>();
+
+                if !trigram_continuations.is_empty() {
+                    continuations = Some(trigram_continuations);
+                }
+            }
+        }
+
+        // If there are no continuations from the trigram - try to get them from the bigram
+        if continuations.is_none() {
+            if let Some(bigram) = bigram.last() {
+                if let Some(bigram_continuations) = self.model.transitions.for_bigram(&bigram) {
+                    let bigram_continuations = bigram_continuations
+                        .map(|(token, _)| token.token())
+                        .collect::<Vec<_>>();
+
+                    if !bigram_continuations.is_empty() {
+                        continuations = Some(bigram_continuations);
+                    }
+                }
+            }
+        }
+
+        // If there are no continuations from the bigram - try to get them from the unigram
+        if continuations.is_none() {
+            if let Some(unigram) = unigram.last() {
+                if let Some(unigram_continuations) = self.model.transitions.for_unigram(&unigram) {
+                    let unigram_continuations = unigram_continuations
+                        .map(|(token, _)| token.token())
+                        .collect::<Vec<_>>();
+
+                    if !unigram_continuations.is_empty() {
+                        continuations = Some(unigram_continuations);
+                    }
+                }
+            }
+        }
+
+        // Stop generation if there are no continuations
+        let mut continuations = continuations?;
 
         // Find offset according to the normal distribution
-        let offset = ((1.0 - self.params.k_normal) * forward_transitions.len() as f64).floor() as usize / 2;
+        let offset = ((1.0 - self.params.k_normal) * continuations.len() as f64).floor() as usize / 2;
 
         // If there's less possible variants than expected
-        if forward_transitions.len() <= offset * 2 {
+        if continuations.len() <= offset * 2 {
             // Stop tokens generation
             return None;
         }
 
         // Remove most and least probable variants
-        forward_transitions = forward_transitions[offset..forward_transitions.len() - offset].to_vec();
+        continuations = continuations[offset..continuations.len() - offset].to_vec();
 
         // If there are no continuations
-        if forward_transitions.is_empty() {
+        if continuations.is_empty() {
             // Stop tokens generation
             return None;
         }
-
-        // Apply smoothing function to the possible continuations
-        let mut forward_transitions = match &self.params.smoothing {
-            Some(SmoothingAlgorithm::AbsoluteDiscounting) => {
-                forward_transitions.into_par_iter()
-                    .flat_map(|(k, _)| {
-                        self.model.transitions.calc_absolute_discounting_smoothing(*k)
-                            .map(|prob| (*k, prob))
-                    })
-                    .collect::<Vec<_>>()
-            }
-
-            Some(SmoothingAlgorithm::KnesserNey) => {
-                forward_transitions.into_par_iter()
-                    .flat_map(|(k, _)| {
-                        self.model.transitions.calc_knesser_nay_smoothing(*k)
-                            .map(|prob| (*k, prob))
-                    })
-                    .collect::<Vec<_>>()
-            }
-
-            None => {
-                forward_transitions.into_par_iter()
-                    .flat_map(|(k, _)| {
-                        self.model.transitions.get_forward_probability(current, *k)
-                            .map(|prob| (*k, prob))
-                    })
-                    .collect::<Vec<_>>()
-            }
-        };
 
         // // Get the context window from the chain history
         // let chain_window = &self.chain[self.chain.len().saturating_sub(self.params.context_window)..];
@@ -87,21 +102,21 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
         // }
 
         // Sort the continuations by probability
-        forward_transitions.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        continuations.sort_by(|a, b| a.cmp(&b));
 
         // dbg!(&forward_transitions[forward_transitions.len() - 3..]);
 
         // While there are continuations
-        while forward_transitions.len() > 1 {
+        while continuations.len() > 1 {
             // Get random seed from 0.0 to 1.0
             let random_seed = rand::random::<u32>() as f64 / u32::MAX as f64;
 
             // Get the next most probable token
-            let next = forward_transitions.last().unwrap().0;
+            let next = continuations.last().unwrap();
 
             // Find all the repeats of the next token
             let repeats = self.chain.iter()
-                .filter(|token| **token == next)
+                .filter(|token| *token == next)
                 .count();
 
             // If the next token is repeated
@@ -133,11 +148,11 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
             }
 
             // Remove current most probable token
-            forward_transitions.pop();
+            continuations.pop();
         }
 
         // Get the most probable token
-        let next = forward_transitions.last().unwrap().0;
+        let next = *continuations.last().unwrap();
 
         // If the chain's length is greater than the minimum length
         if self.chain.len() > self.params.min_length {
@@ -148,8 +163,8 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
             }
         }
 
-        // If the next ngram is an end of the text
-        if next.is_end() {
+        // If the next token is an end of the text
+        if next == END_TOKEN {
             // Stop tokens generation
             return None;
         }
@@ -162,4 +177,4 @@ impl<'a, const NGRAM_SIZE: usize> Iterator for Generator<'a, NGRAM_SIZE> {
     }
 }
 
-impl<'a, const NGRAM_SIZE: usize> FusedIterator for Generator<'a, NGRAM_SIZE> {}
+impl<'a> FusedIterator for Generator<'a> {}
