@@ -19,7 +19,7 @@ pub struct GenerationParams {
     /// See `temperature` for the formula.
     pub temperature_alpha: f64,
 
-    #[arg(long, default_value_t = 0.35)]
+    #[arg(long, default_value_t = 0.7)]
     /// Probability to skip repeated token
     /// 
     /// If `random_seed > repeat_penalty^[repeats number]`,
@@ -65,7 +65,7 @@ impl Default for GenerationParams {
         Self {
             temperature: 0.85,
             temperature_alpha: 1.0,
-            repeat_penalty: 0.35,
+            repeat_penalty: 0.7,
             k_normal: 0.95,
             min_length: 1,
             max_len: 150,

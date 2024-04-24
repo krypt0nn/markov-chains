@@ -140,18 +140,21 @@ impl<'a> Iterator for Generator<'a> {
                 }
             }
 
-            // Calculate the temperature
-            let temperature = self.params.temperature * self.params.temperature_alpha.powi(self.chain.len() as i32);
+            // Otherwise
+            else {
+                // Calculate the temperature
+                let temperature = self.params.temperature * self.params.temperature_alpha.powi(self.chain.len() as i32);
 
-            // If the random seed is lower than the temperature
-            // 
-            // temperature: 0.5 -> 0.25 -> 0.125 -> 0.0625 -> ...
-            // 
-            // lower temperature => lower chance that the if statement works
-            // => higher chance that the next token is skipped
-            if random_seed < temperature {
-                // Keep current token as the next one
-                break;
+                // If the random seed is lower than the temperature
+                // 
+                // temperature: 0.5 -> 0.25 -> 0.125 -> 0.0625 -> ...
+                // 
+                // lower temperature => lower chance that the if statement works
+                // => higher chance that the next token is skipped
+                if random_seed < temperature {
+                    // Keep current token as the next one
+                    break;
+                }
             }
 
             // Remove current most probable token
