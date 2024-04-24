@@ -29,7 +29,7 @@ impl<'a> Iterator for Generator<'a> {
         if let Some(trigram) = trigram.last() {
             if let Some(trigram_continuations) = self.model.transitions.for_trigram(trigram) {
                 let trigram_continuations = trigram_continuations
-                    .map(|(token, _)| token.token())
+                    .map(|(token, number)| (token.token(), *number))
                     .collect::<Vec<_>>();
 
                 if !trigram_continuations.is_empty() {
@@ -43,7 +43,7 @@ impl<'a> Iterator for Generator<'a> {
             if let Some(bigram) = bigram.last() {
                 if let Some(bigram_continuations) = self.model.transitions.for_bigram(bigram) {
                     let bigram_continuations = bigram_continuations
-                        .map(|(token, _)| token.token())
+                        .map(|(token, number)| (token.token(), *number))
                         .collect::<Vec<_>>();
 
                     if !bigram_continuations.is_empty() {
@@ -58,7 +58,7 @@ impl<'a> Iterator for Generator<'a> {
             if let Some(unigram) = unigram.last() {
                 if let Some(unigram_continuations) = self.model.transitions.for_unigram(unigram) {
                     let unigram_continuations = unigram_continuations
-                        .map(|(token, _)| token.token())
+                        .map(|(token, number)| (token.token(), *number))
                         .collect::<Vec<_>>();
 
                     if !unigram_continuations.is_empty() {
@@ -102,7 +102,7 @@ impl<'a> Iterator for Generator<'a> {
         // }
 
         // Sort the continuations by probability
-        continuations.sort();
+        continuations.sort_by(|a, b| a.1.cmp(&b.1));
 
         // dbg!(&continuations);
 
@@ -112,11 +112,11 @@ impl<'a> Iterator for Generator<'a> {
             let random_seed = rand::random::<u32>() as f64 / u32::MAX as f64;
 
             // Get the next most probable token
-            let next = continuations.last().unwrap();
+            let next = continuations.last().unwrap().0;
 
             // Find all the repeats of the next token
             let repeats = self.chain.iter()
-                .filter(|token| *token == next)
+                .filter(|token| **token == next)
                 .count();
 
             // If the next token is repeated
@@ -152,7 +152,7 @@ impl<'a> Iterator for Generator<'a> {
         }
 
         // Get the most probable token
-        let next = *continuations.last().unwrap();
+        let next = continuations.last().unwrap().0;
 
         // If the chain's length is greater than the minimum length
         if self.chain.len() > self.params.min_length {

@@ -15,23 +15,31 @@ pub struct Transitions {
     pub(crate) unigrams: HashMap<Unigram, HashMap<Unigram, u64>>,
 
     /// count = forward_transitions\[current_ngram\]\[next_ngram\]
-    pub(crate) bigrams: HashMap<Bigram, HashMap<Bigram, u64>>,
+    pub(crate) bigrams: Option<HashMap<Bigram, HashMap<Bigram, u64>>>,
 
     /// count = forward_transitions\[current_ngram\]\[next_ngram\]
-    pub(crate) trigrams: HashMap<Trigram, HashMap<Trigram, u64>>
+    pub(crate) trigrams: Option<HashMap<Trigram, HashMap<Trigram, u64>>>
 }
 
 impl Transitions {
-    pub fn build_from_dataset(dataset: &Dataset) -> Self {
+    pub fn build_from_dataset(dataset: &Dataset, build_bigrams: bool, build_trigrams: bool) -> Self {
         let mut unigrams = HashMap::<Unigram, HashMap<Unigram, u64>>::new();
-        let mut bigrams = HashMap::<Bigram, HashMap<Bigram, u64>>::new();
-        let mut trigrams = HashMap::<Trigram, HashMap<Trigram, u64>>::new();
+
+        let mut bigrams = if build_bigrams {
+            Some(HashMap::<Bigram, HashMap<Bigram, u64>>::new())
+        } else {
+            None
+        };
+
+        let mut trigrams = if build_trigrams {
+            Some(HashMap::<Trigram, HashMap<Trigram, u64>>::new())
+        } else {
+            None
+        };
 
         for (messages, weight) in dataset.messages() {
             for message in messages.messages() {
                 let unigram = Unigram::construct(message);
-                let bigram = Bigram::construct(message);
-                let trigram = Trigram::construct(message);
 
                 for i in 0..unigram.len() - 1 {
                     *unigrams.entry(unigram[i])
@@ -40,18 +48,26 @@ impl Transitions {
                         .or_default() += *weight;
                 }
 
-                for i in 0..bigram.len() - 1 {
-                    *bigrams.entry(bigram[i])
-                        .or_default()
-                        .entry(bigram[i + 1])
-                        .or_default() += *weight;
+                if let Some(bigrams) = &mut bigrams {
+                    let bigram = Bigram::construct(message);
+
+                    for i in 0..bigram.len() - 1 {
+                        *bigrams.entry(bigram[i])
+                            .or_default()
+                            .entry(bigram[i + 1])
+                            .or_default() += *weight;
+                    }
                 }
 
-                for i in 0..trigram.len() - 1 {
-                    *trigrams.entry(trigram[i])
-                        .or_default()
-                        .entry(trigram[i + 1])
-                        .or_default() += *weight;
+                if let Some(trigrams) = &mut trigrams {
+                    let trigram = Trigram::construct(message);
+
+                    for i in 0..trigram.len() - 1 {
+                        *trigrams.entry(trigram[i])
+                            .or_default()
+                            .entry(trigram[i + 1])
+                            .or_default() += *weight;
+                    }
                 }
             }
         }
@@ -69,13 +85,13 @@ impl Transitions {
     }
 
     #[inline]
-    pub fn bigrams_len(&self) -> usize {
-        self.bigrams.len()
+    pub fn bigrams_len(&self) -> Option<usize> {
+        Some(self.bigrams.as_ref()?.len())
     }
 
     #[inline]
-    pub fn trigrams_len(&self) -> usize {
-        self.trigrams.len()
+    pub fn trigrams_len(&self) -> Option<usize> {
+        Some(self.trigrams.as_ref()?.len())
     }
 
     #[inline]
@@ -85,12 +101,12 @@ impl Transitions {
 
     #[inline]
     pub fn for_bigram(&self, bigram: &Bigram) -> Option<impl Iterator<Item = (&'_ Bigram, &'_ u64)>> {
-        self.bigrams.get(bigram).map(|transitions| transitions.iter())
+        self.bigrams.as_ref()?.get(bigram).map(|transitions| transitions.iter())
     }
 
     #[inline]
     pub fn for_trigram(&self, trigram: &Trigram) -> Option<impl Iterator<Item = (&'_ Trigram, &'_ u64)>> {
-        self.trigrams.get(trigram).map(|transitions| transitions.iter())
+        self.trigrams.as_ref()?.get(trigram).map(|transitions| transitions.iter())
     }
 
     #[inline]
@@ -106,7 +122,8 @@ impl Transitions {
     #[inline]
     /// Get probability of the (current_ngram -> next_ngram)
     pub fn calc_bigram_probability(&self, current_ngram: &Bigram, next_ngram: &Bigram) -> Option<f64> {
-        self.bigrams.get(current_ngram)
+        self.bigrams.as_ref()?
+            .get(current_ngram)
             .and_then(|transitions| {
                 transitions.get(next_ngram).map(|count| (count, transitions.len()))
             })
@@ -116,7 +133,8 @@ impl Transitions {
     #[inline]
     /// Get probability of the (current_ngram -> next_ngram)
     pub fn calc_trigram_probability(&self, current_ngram: &Trigram, next_ngram: &Trigram) -> Option<f64> {
-        self.trigrams.get(current_ngram)
+        self.trigrams.as_ref()?
+            .get(current_ngram)
             .and_then(|transitions| {
                 transitions.get(next_ngram).map(|count| (count, transitions.len()))
             })
@@ -138,28 +156,30 @@ impl Transitions {
 
     #[inline]
     /// Calculate average amount of paths per bigram
-    pub fn calc_avg_bigram_paths(&self) -> f64 {
-        let paths = self.bigrams.par_iter()
+    pub fn calc_avg_bigram_paths(&self) -> Option<f64> {
+        let paths = self.bigrams.as_ref()?
+            .par_iter()
             .filter(|(k, _)| !k.is_start() && !k.is_end())
             .map(|(_, transitions)| transitions.par_iter())
             .map(|transitions| transitions.filter(|(k, _)| !k.is_start() && !k.is_end()))
             .map(|transitions| transitions.count() as u64)
             .sum::<u64>();
 
-        paths as f64 / self.bigrams_len() as f64
+        Some(paths as f64 / self.bigrams_len()? as f64)
     }
 
     #[inline]
     /// Calculate average amount of paths per trigram
-    pub fn calc_avg_trigram_paths(&self) -> f64 {
-        let paths = self.trigrams.par_iter()
+    pub fn calc_avg_trigram_paths(&self) -> Option<f64> {
+        let paths = self.trigrams.as_ref()?
+            .par_iter()
             .filter(|(k, _)| !k.is_start() && !k.is_end())
             .map(|(_, transitions)| transitions.par_iter())
             .map(|transitions| transitions.filter(|(k, _)| !k.is_start() && !k.is_end()))
             .map(|transitions| transitions.count() as u64)
             .sum::<u64>();
 
-        paths as f64 / self.bigrams_len() as f64
+        Some(paths as f64 / self.trigrams_len()? as f64)
     }
 
     #[inline]
@@ -180,10 +200,11 @@ impl Transitions {
 
     #[inline]
     /// Calculate variety of the unigrams chain
-    pub fn calc_bigram_variety(&self) -> f64 {
-        let avg_paths = self.calc_avg_bigram_paths();
+    pub fn calc_bigram_variety(&self) -> Option<f64> {
+        let avg_paths = self.calc_avg_bigram_paths()?;
 
-        let more_than_avg_paths = self.bigrams.par_iter()
+        let more_than_avg_paths = self.bigrams.as_ref()?
+            .par_iter()
             .filter(|(k, _)| !k.is_start() && !k.is_end())
             .map(|(_, transitions)| transitions.keys())
             .map(|ngrams| ngrams.filter(|ngram| !ngram.is_start() && !ngram.is_end()))
@@ -191,15 +212,16 @@ impl Transitions {
             .filter(|count| *count > avg_paths)
             .count();
 
-        more_than_avg_paths as f64 / self.unigrams_len() as f64
+        Some(more_than_avg_paths as f64 / self.bigrams_len()? as f64)
     }
 
     #[inline]
     /// Calculate variety of the trigrams chain
-    pub fn calc_trigram_variety(&self) -> f64 {
-        let avg_paths = self.calc_avg_trigram_paths();
+    pub fn calc_trigram_variety(&self) -> Option<f64> {
+        let avg_paths = self.calc_avg_trigram_paths()?;
 
-        let more_than_avg_paths = self.trigrams.par_iter()
+        let more_than_avg_paths = self.trigrams.as_ref()?
+            .par_iter()
             .filter(|(k, _)| !k.is_start() && !k.is_end())
             .map(|(_, transitions)| transitions.keys())
             .map(|ngrams| ngrams.filter(|ngram| !ngram.is_start() && !ngram.is_end()))
@@ -207,7 +229,7 @@ impl Transitions {
             .filter(|count| *count > avg_paths)
             .count();
 
-        more_than_avg_paths as f64 / self.unigrams_len() as f64
+        Some(more_than_avg_paths as f64 / self.trigrams_len()? as f64)
     }
 }
 
@@ -231,7 +253,7 @@ mod tests {
 
         // hello -> world
         // example -> text
-        let transitions = dataset.build_transitions();
+        let transitions = dataset.build_transitions(false, false);
 
         let hello = dataset.tokens.find_token("hello,").unwrap();
         let world = dataset.tokens.find_token("world!").unwrap();

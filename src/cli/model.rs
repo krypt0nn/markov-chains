@@ -20,6 +20,20 @@ pub enum CliModelCommand {
         /// Path to the dataset bundle
         dataset: PathBuf,
 
+        #[arg(long)]
+        /// Build bigrams transitions table
+        bigrams: bool,
+
+        #[arg(long)]
+        /// Build trigrams transitions table
+        trigrams: bool,
+
+        #[arg(long)]
+        /// Header to add to the model
+        /// 
+        /// `--header key=value`
+        header: Vec<String>,
+
         #[arg(short, long)]
         /// Path to the model output
         output: PathBuf
@@ -30,6 +44,20 @@ pub enum CliModelCommand {
         #[arg(short, long)]
         /// Path to the plain messages file
         messages: Vec<PathBuf>,
+
+        #[arg(long)]
+        /// Build bigrams transitions table
+        bigrams: bool,
+
+        #[arg(long)]
+        /// Build trigrams transitions table
+        trigrams: bool,
+
+        #[arg(long)]
+        /// Header to add to the model
+        /// 
+        /// `--header key=value`
+        header: Vec<String>,
 
         #[arg(short, long)]
         /// Path to the model output
@@ -51,14 +79,20 @@ impl CliModelCommand {
     #[inline]
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            Self::Build { dataset, output } => {
+            Self::Build { dataset, bigrams, trigrams, header, output } => {
                 println!("Reading dataset bundle...");
 
                 let messages = postcard::from_bytes::<Dataset>(&std::fs::read(dataset)?)?;
 
                 println!("Building model...");
 
-                let model = Model::build(messages);
+                let mut model = Model::build(messages, *bigrams, *trigrams);
+
+                for header in header {
+                    if let Some((key, value)) = header.split_once('=') {
+                        model = model.with_header(key, value);
+                    }
+                }
 
                 println!("Storing model...");
 
@@ -67,7 +101,7 @@ impl CliModelCommand {
                 println!("Done");
             }
 
-            Self::FromScratch { messages: paths, output } => {
+            Self::FromScratch { messages: paths, bigrams, trigrams, header, output } => {
                 println!("Parsing messages...");
 
                 let mut messages = Messages::default();
@@ -96,7 +130,13 @@ impl CliModelCommand {
 
                 println!("Building model...");
 
-                let model = Model::build(dataset);
+                let mut model = Model::build(dataset, *bigrams, *trigrams);
+
+                for header in header {
+                    if let Some((key, value)) = header.split_once('=') {
+                        model = model.with_header(key, value);
+                    }
+                }
 
                 println!("Storing model...");
 
@@ -115,13 +155,49 @@ impl CliModelCommand {
                 let stdin = std::io::stdin();
                 let mut stdout = std::io::stdout();
 
+                let chains = (
+                    model.transitions.trigrams_len()
+                        .map(|len| len.to_string())
+                        .unwrap_or(String::from("N/A")),
+
+                    model.transitions.bigrams_len()
+                        .map(|len| len.to_string())
+                        .unwrap_or(String::from("N/A")),
+
+                    model.transitions.unigrams_len()
+                );
+
+                let avg_paths = (
+                    model.transitions.calc_avg_trigram_paths()
+                        .map(|avg| format!("{:.4}", avg))
+                        .unwrap_or(String::from("N/A")),
+
+                    model.transitions.calc_avg_bigram_paths()
+                        .map(|avg| format!("{:.4}", avg))
+                        .unwrap_or(String::from("N/A")),
+
+                    format!("{:.4}", model.transitions.calc_avg_unigram_paths())
+                );
+
+                let variety = (
+                    model.transitions.calc_trigram_variety()
+                        .map(|variety| format!("{:.4}%", variety * 100.0))
+                        .unwrap_or(String::from("N/A")),
+
+                    model.transitions.calc_bigram_variety()
+                        .map(|variety| format!("{:.4}%", variety * 100.0))
+                        .unwrap_or(String::from("N/A")),
+
+                    format!("{:.4}%", model.transitions.calc_unigram_variety() * 100.0)
+                );
+
                 println!();
                 println!("  Model loaded:");
                 println!();
                 println!("    Total tokens  :  {}", model.tokens.len());
-                println!("    Chains        :  {} / {} / {}", model.transitions.trigrams_len(), model.transitions.bigrams_len(), model.transitions.unigrams_len());
-                println!("    Avg paths     :  {:.4} / {:.4} / {:.4}", model.transitions.calc_avg_trigram_paths(), model.transitions.calc_avg_bigram_paths(), model.transitions.calc_avg_unigram_paths());
-                println!("    Variety       :  {:.4}% / {:.4}% / {:.4}%", model.transitions.calc_trigram_variety() * 100.0, model.transitions.calc_bigram_variety() * 100.0, model.transitions.calc_unigram_variety() * 100.0);
+                println!("    Chains        :  {} / {} / {}", chains.0, chains.1, chains.2);
+                println!("    Avg paths     :  {} / {} / {}", avg_paths.0, avg_paths.1, avg_paths.2);
+                println!("    Variety       :  {} / {} / {}", variety.0, variety.1, variety.2);
 
                 if !model.headers().is_empty() {
                     println!();

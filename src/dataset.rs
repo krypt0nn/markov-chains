@@ -37,7 +37,7 @@ impl Dataset {
     }
 
     #[inline]
-    pub fn build_transitions(&self) -> Transitions {
-        Transitions::build_from_dataset(self)
+    pub fn build_transitions(&self, build_bigrams: bool, build_trigrams: bool) -> Transitions {
+        Transitions::build_from_dataset(self, build_bigrams, build_trigrams)
     }
 }

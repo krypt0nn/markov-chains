@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use crate::prelude::{
     Dataset,
     Tokens,
-    Ngram,
     GenerationParams,
     Transitions,
     Generator
@@ -18,10 +17,10 @@ pub struct Model {
 
 impl Model {
     #[inline]
-    pub fn build(dataset: Dataset) -> Self {
+    pub fn build(dataset: Dataset, build_bigrams: bool, build_trigrams: bool) -> Self {
         let model = Self {
             headers: HashMap::new(),
-            transitions: dataset.build_transitions(),
+            transitions: dataset.build_transitions(build_bigrams, build_trigrams),
             tokens: dataset.tokens
         };
 

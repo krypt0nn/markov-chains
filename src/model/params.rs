@@ -1,46 +1,7 @@
-use clap::{
-    Args,
-    ValueEnum
-};
-
-use clap::builder::{
-    PossibleValue,
-    EnumValueParser
-};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SmoothingAlgorithm {
-    /// Kneser–Ney smoothing - https://en.wikipedia.org/wiki/Kneser%E2%80%93Ney_smoothing
-    KnesserNey,
-
-    /// Absolute discounting smoothing
-    AbsoluteDiscounting
-}
-
-impl ValueEnum for SmoothingAlgorithm {
-    #[inline]
-    fn value_variants<'a>() -> &'a [Self] {
-        &[Self::KnesserNey, Self::AbsoluteDiscounting]
-    }
-
-    #[inline]
-    fn to_possible_value(&self) -> Option<PossibleValue> {
-        Some(match self {
-            Self::KnesserNey => PossibleValue::new("knesser-ney"),
-            Self::AbsoluteDiscounting => PossibleValue::new("absolute-discounting"),
-        })
-    }
-}
+use clap::Args;
 
 #[derive(Debug, Clone, Copy, Args)]
 pub struct GenerationParams {
-    #[arg(long, default_value_t = 15)]
-    /// Number of tokens used to generate the next token
-    /// 
-    /// If set to 0, then only the previous token is used.
-    /// Affects performance the most.
-    pub context_window: usize,
-
     #[arg(long, default_value_t = 0.85)]
     /// Probability to keep the most probable token
     /// 
@@ -58,7 +19,7 @@ pub struct GenerationParams {
     /// See `temperature` for the formula.
     pub temperature_alpha: f64,
 
-    #[arg(long, default_value_t = 0.4)]
+    #[arg(long, default_value_t = 0.35)]
     /// Probability to skip repeated token
     /// 
     /// If `random_seed > repeat_penalty^[repeats number]`,
@@ -78,12 +39,6 @@ pub struct GenerationParams {
     /// Lower value will generate more "bot-looking" (weird) text.
     pub k_normal: f64,
 
-    #[arg(
-        long,
-        value_parser = EnumValueParser::<SmoothingAlgorithm>::new()
-    )]
-    pub smoothing: Option<SmoothingAlgorithm>,
-
     #[arg(long, default_value_t = 1)]
     /// Minimum length of the generated text
     pub min_length: usize,
@@ -100,12 +55,10 @@ impl Default for GenerationParams {
     #[inline]
     fn default() -> Self {
         Self {
-            context_window: 15,
             temperature: 0.85,
             temperature_alpha: 1.0,
-            repeat_penalty: 0.4,
+            repeat_penalty: 0.35,
             k_normal: 0.95,
-            smoothing: None,
             min_length: 1,
             max_len: 150
         }

@@ -28,12 +28,7 @@ pub mod prelude {
     };
 
     pub use super::dataset::Dataset;
-
-    pub use super::model::params::{
-        GenerationParams,
-        SmoothingAlgorithm
-    };
-
+    pub use super::model::params::GenerationParams;
     pub use super::model::transitions::Transitions;
     pub use super::model::generator::Generator;
     pub use super::model::model::Model;
