@@ -193,6 +193,11 @@ impl CliModelCommand {
                     format!("{:.4}%", model.transitions.calc_unigram_variety() * 100.0)
                 );
 
+                let model_name = model.headers()
+                    .get("name")
+                    .map(|name| name.as_str())
+                    .unwrap_or("model");
+
                 println!();
                 println!("  Model loaded:");
                 println!();
@@ -243,7 +248,7 @@ impl CliModelCommand {
                         continue;
                     }
 
-                    stdout.write_all(b"\n  model: ")?;
+                    stdout.write_all(format!("\n  {model_name}: ").as_bytes())?;
                     stdout.flush()?;
 
                     for token in &request {
