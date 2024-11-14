@@ -131,9 +131,9 @@ impl<'a> Iterator for Generator<'a> {
             // If the next token is repeated
             if repeats > 0 {
                 // If the random seed is lower than the repeat penalty
-                // 
+                //
                 // repeat_penalty: 0.5 -> 0.25 -> 0.125 -> 0.0625 -> ...
-                // 
+                //
                 // lower repeat_penalty => lower chance that the if statement works
                 // => higher chance that the next token is skipped
                 if random_seed < self.params.repeat_penalty.powi(repeats as i32) {
@@ -148,9 +148,9 @@ impl<'a> Iterator for Generator<'a> {
                 let temperature = self.params.temperature * self.params.temperature_alpha.powi(self.chain.len() as i32);
 
                 // If the random seed is lower than the temperature
-                // 
+                //
                 // temperature: 0.5 -> 0.25 -> 0.125 -> 0.0625 -> ...
-                // 
+                //
                 // lower temperature => lower chance that the if statement works
                 // => higher chance that the next token is skipped
                 if random_seed < temperature {
@@ -167,7 +167,7 @@ impl<'a> Iterator for Generator<'a> {
         let next = continuations.last().unwrap().0;
 
         // If the chain's length is greater than the minimum length
-        if self.chain.len() > self.params.min_length {
+        if self.chain.len() > self.params.min_len {
             // If the chain's length is greater than the maximum length
             if self.chain.len() > self.params.max_len {
                 // Stop tokens generation
