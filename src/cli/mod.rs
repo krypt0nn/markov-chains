@@ -2,15 +2,15 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-mod messages;
-mod tokens;
-mod dataset;
-mod model;
+mod parser;
+// mod tokens;
+// mod dataset;
+// mod model;
 
-use messages::CliMessagesCommand;
-use tokens::CliTokensCommand;
-use dataset::CliDatasetCommand;
-use model::CliModelCommand;
+use parser::CliMessagesCommand;
+// use tokens::CliTokensCommand;
+// use dataset::CliDatasetCommand;
+// use model::CliModelCommand;
 
 pub fn search_files(paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Vec<PathBuf> {
     let mut files = Vec::new();
@@ -54,28 +54,10 @@ impl Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Work with messages
-    Messages {
+    /// Parse input files into separate messages
+    Parser {
         #[command(subcommand)]
-        action: CliMessagesCommand
-    },
-
-    /// Work with tokens
-    Tokens {
-        #[command(subcommand)]
-        action: CliTokensCommand
-    },
-
-    /// Work with dataset
-    Dataset {
-        #[command(subcommand)]
-        action: CliDatasetCommand
-    },
-
-    /// Work with language model
-    Model {
-        #[command(subcommand)]
-        action: CliModelCommand
+        action: CliParserCommand
     }
 }
 
@@ -83,10 +65,10 @@ impl Commands {
     #[inline]
     pub fn execute(&self) -> anyhow::Result<()> {
         match self {
-            Self::Messages { action } => action.execute(),
-            Self::Tokens { action } => action.execute(),
-            Self::Dataset { action } => action.execute(),
-            Self::Model { action } => action.execute()
+            Self::Parser { action } => action.execute(),
+            // Self::Tokens { action } => action.execute(),
+            // Self::Dataset { action } => action.execute(),
+            // Self::Model { action } => action.execute()
         }
     }
 }

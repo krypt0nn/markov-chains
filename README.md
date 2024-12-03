@@ -1,78 +1,75 @@
-# Funny stoopid text generation app
+# Purely statistical text generator
 
-We've randomly decided to play with [Markov chains](https://en.wikipedia.org/wiki/Markov_chain) on my discord server, and I decided to release my results in github.
+Started as a joke project, this crate contains set of different natural language
+processing and generation algorithms optimized to work with large datasets
+by storing all the data on disk and performing computations on small chunks
+of the data.
 
-> If you have any questions - refer to `markov-chains --help` or `markov-chains <command> --help`.
+Instead of making data-driven models based on neural networks which can
+learn linguistic features from large amounts of input data here we construct
+purely statistical, mathematical models of the language from smaller amount
+of input data and use these models to generate new text.
 
-## Simple example
+Model-driven generators require much less time for training, can be run
+by virtually everybody and are more than enough for making fun!
 
-1. Build the model from the input text files
+Sources of inspiration:
 
-> cargo run -- model from-scratch --messages inputs/json/kleden.txt --output outputs/models/kleden1.model
+- https://en.wikipedia.org/wiki/Markov_model
+- https://en.wikipedia.org/wiki/Hidden_Markov_model
+- https://en.wikipedia.org/wiki/Baum–Welch_algorithm
+- https://en.wikipedia.org/wiki/Viterbi_algorithm
+- https://en.wikipedia.org/wiki/Forward–backward_algorithm
 
-Accepted input files formats are json strings and plain text lines:
+## Workflow
 
-Json strings lines:
+The whole model building process is split into several stages. Each stage
+can be executed individually to fine-tune your parameters with different
+algorithms and options, and to save materials for future work.
 
-> "Selamat Pagi"\
-> "Minecraft ugh"
+Stages' results are stored in storages on disk which compress all the data
+to save your disk space.
 
-Plain text lines:
+<img src="./workflow.png" />
 
-> Political economy belongs to the category of the social sciences.\
-> The basis of the life of society is material production.
+## Commands
 
-2. Load model
+List of all supported commands.
 
-> cargo run -- model load --model outputs/models/kleden1.model
+### Parsing
 
-There's a bunch of params you can change to play with the model. Most important ones are `--context-window` which configures the "intelligence" of the model, and `--min-length` which can force model to keep generating new text.
+Parsers extract meaningful pieces of data from the text corpuses.
+While some are straightforward, others may implement advanced logic.
 
-## Complex example
+| Command                       | Description                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| `parser newline parse`        | Split input text files by new lines separators, assume each line is individual message. |
+| `parser newline dump`         | Print messages as JSON strings to the stdout.                                           |
+| `parser discord-export parse` | Parse messages from the exported discord history and optionally format them.            |
+| `parser discord-export dump`  | Print messages as JSON strings to the stdout.                                           |
+| `parser storage info`         | Print stats of the parsed messages storage.                                             |
+| `parser storage merge`        | Merge given parsed messages storages into single one.                                   |
+| `parser storage dump`         | Print parsed messages as JSON strings to the stdout.                                    |
 
-1. Generate messages bundle. Those are filtered lists of pre-processed words
+### Preprocessing
 
-> cargo run -- messages parse --path inputs/json/kleden.txt --output outputs/messages/kleden.bundle
-> 
-> cargo run -- messages parse --path inputs/text/political-economy.txt --output outputs/messages/political-economy.bundle
-> 
-> cargo run -- messages parse --path inputs/text/state-and-revolution.txt --output outputs/messages/state-and-revolution.bundle
+Preprocessors split messages into words and format them, optionally making
+all the text lowercased, removing all the punctuation and so on. Choosing
+pre-processor and its parameters directly affects final model's quality.
 
-2. Merge books to one messages set
+| Command                                    | Description                                                    |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| `preprocessor whitespace preprocess`       | Split words by whitespace characters (spaces, new lines, etc). |
+| `preprocessor whitespace dump`             | Print words as JSON arrays to the stdout.                      |
+| `preprocessor natural-language preprocess` | Split words into natural language components.                  |
+| `preprocessor natural-language dump`       | Print words as JSON arrays to the stdout.                      |
+| `preprocessor storage info`                | Print stats of the preprocessed messages storage.              |
+| `preprocessor storage merge`               | Merge given preprocessed messages storages into single one.    |
+| `preprocessor storage dump`                | Print preprocessed messages as JSON strings to the stdout.     |
 
-> cargo run -- messages merge --path outputs/messages/political-economy.bundle --path outputs/messages/state-and-revolution.bundle --output outputs/messages/background.bundle
+### Tokenizing
 
-3. Create tokens from the messages sets
-
-> cargo run -- tokens parse --path outputs/messages/kleden.bundle --output outputs/tokens/kleden.bundle
-> 
-> cargo run -- tokens parse --path outputs/messages/background.bundle --output outputs/tokens/background.bundle
-
-4. Merge tokens to the single bundle
-
-> cargo run -- tokens merge --path outputs/tokens/background.bundle --path outputs/tokens/kleden.bundle --output outputs/tokens/tokens.bundle
-
-5. Tokenize prepared messages bundles
-
-> cargo run -- messages tokenize --messages outputs/messages/background.bundle --tokens outputs/tokens/tokens.bundle --output outputs/tokenized/background.bundle
-> 
-> cargo run -- messages tokenize --messages outputs/messages/kleden.bundle --tokens outputs/tokens/tokens.bundle --output outputs/tokenized/kleden.bundle
-
-6. Create new dataset from the background messages bundle
-
-> cargo run -- dataset create --messages outputs/tokenized/background.bundle --tokens outputs/tokens/tokens.bundle --output outputs/datasets/kleden2.bundle
-
-7. Extend this dataset with the kleden's messages bundle with bigger weight (10)
-
-> cargo run -- dataset add-messages --path outputs/datasets/kleden2.bundle --messages outputs/tokenized/kleden.bundle --weight 10 --output outputs/datasets/kleden2.bundle
-
-8. Build the model
-
-> cargo run -- model build --dataset outputs/datasets/kleden2.bundle --output outputs/models/kleden2.model
-
-9. Load model
-
-> cargo run -- model load --model outputs/models/kleden2.model
+TODO
 
 Author: [Nikita Podvirnyi](https://github.com/krypt0nn)\
-Licensed under [MIT](LICENSE)
+Licensed under [GPL-3.0](LICENSE)
